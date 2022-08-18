@@ -1,0 +1,364 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.2">
+  <object class="tk.Toplevel" id="toplevel">
+    <property name="height">200</property>
+    <property name="title" translatable="yes">^3^</property>
+    <property name="width">200</property>
+    <child>
+      <object class="ttk.Panedwindow" id="panedwindow2">
+        <property name="height">600</property>
+        <property name="orient">horizontal</property>
+        <property name="width">800</property>
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="ttk.Panedwindow.Pane" id="pane4">
+            <property name="weight">1</property>
+            <child>
+              <object class="ttk.Notebook" id="notebook1">
+                <property name="height">400</property>
+                <property name="width">150</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="side">left</property>
+                </layout>
+                <child>
+                  <object class="ttk.Notebook.Tab" id="tab1">
+                    <property name="text" translatable="yes">播放列表</property>
+                    <child>
+                      <object class="ttk.Frame" id="frame2">
+                        <property name="height">200</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="tk.Listbox" id="play_listbox">
+                            <layout manager="pack">
+                              <property name="expand">true</property>
+                              <property name="fill">both</property>
+                              <property name="padx">6</property>
+                              <property name="pady">6</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Notebook.Tab" id="tab2">
+                    <property name="text" translatable="yes">下载列表</property>
+                    <child>
+                      <object class="ttk.Frame" id="frame3">
+                        <property name="height">200</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="tk.Listbox" id="download_listbox">
+                            <layout manager="pack">
+                              <property name="expand">true</property>
+                              <property name="fill">both</property>
+                              <property name="padx">6</property>
+                              <property name="pady">6</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Panedwindow.Pane" id="pane5">
+            <property name="weight">9</property>
+            <child>
+              <object class="ttk.Frame" id="frame10">
+                <property name="height">200</property>
+                <property name="relief">groove</property>
+                <property name="width">800</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">9</property>
+                  <property name="pady">9</property>
+                  <property name="side">top</property>
+                </layout>
+                <child>
+                  <object class="ttk.Frame" id="frame11">
+                    <property name="height">200</property>
+                    <layout manager="pack">
+                      <property name="pady">36</property>
+                      <property name="side">top</property>
+                    </layout>
+                    <child>
+                      <object class="pygubu.builder.widgets.combobox" id="sources_combobox">
+                        <property name="keyvariable">string:_current_source</property>
+                        <property name="width">6</property>
+                        <layout manager="pack">
+                          <property name="side">left</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Entry" id="search_entry">
+                        <property name="width">49</property>
+                        <layout manager="pack">
+                          <property name="expand">true</property>
+                          <property name="fill">x</property>
+                          <property name="padx">9</property>
+                          <property name="side">left</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Button" id="search_button">
+                        <property name="command" type="command" cbtype="simple">_search</property>
+                        <property name="width">3</property>
+                        <layout manager="pack">
+                          <property name="side">left</property>
+                        </layout>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Frame" id="frame12">
+                    <property name="height">200</property>
+                    <property name="width">200</property>
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="padx">30</property>
+                      <property name="side">top</property>
+                    </layout>
+                    <child>
+                      <object class="pygubu.builder.widgets.scrolledframe" id="scrolledframe">
+                        <property name="relief">groove</property>
+                        <property name="scrolltype">both</property>
+                        <property name="usemousewheel">true</property>
+                        <layout manager="pack">
+                          <property name="expand">true</property>
+                          <property name="fill">both</property>
+                          <property name="side">top</property>
+                        </layout>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="tk.Canvas" id="audio_canvas">
+                    <property name="height">60</property>
+                    <property name="state">disabled</property>
+                    <layout manager="pack">
+                      <property name="fill">x</property>
+                      <property name="padx">30</property>
+                      <property name="pady">20</property>
+                      <property name="side">top</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Frame" id="frame13">
+                    <property name="height">200</property>
+                    <property name="relief">groove</property>
+                    <property name="width">200</property>
+                    <layout manager="pack">
+                      <property name="fill">x</property>
+                      <property name="padx">30</property>
+                      <property name="pady">9</property>
+                      <property name="side">top</property>
+                    </layout>
+                    <child>
+                      <object class="ttk.Frame" id="frame14">
+                        <property name="height">200</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="expand">true</property>
+                          <property name="fill">x</property>
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="ttk.Scale" id="progress_bar">
+                            <property name="command" type="command" cbtype="scale">_do_pos_changed</property>
+                            <property name="from_">0</property>
+                            <property name="orient">horizontal</property>
+                            <property name="state">disabled</property>
+                            <property name="variable">int:_current_pos</property>
+                            <layout manager="pack">
+                              <property name="expand">true</property>
+                              <property name="fill">x</property>
+                              <property name="padx">30</property>
+                              <property name="pady">9</property>
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Label" id="progress_label1">
+                            <property name="text" translatable="yes">--</property>
+                            <property name="textvariable">string:_current_length</property>
+                            <layout manager="pack">
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Label" id="label1">
+                            <property name="text" translatable="yes">/</property>
+                            <layout manager="pack">
+                              <property name="padx">6</property>
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Label" id="process_label2">
+                            <property name="text" translatable="yes">--</property>
+                            <property name="textvariable">string:_total_length</property>
+                            <layout manager="pack">
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Frame" id="frame15">
+                        <property name="height">200</property>
+                        <property name="width">800</property>
+                        <layout manager="pack">
+                          <property name="expand">true</property>
+                          <property name="fill">x</property>
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="ttk.Button" id="volume_button">
+                            <property name="command" type="command" cbtype="simple">_toggle_mute</property>
+                            <property name="width">3</property>
+                            <layout manager="pack">
+                              <property name="padx">9</property>
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Scale" id="volume_scale">
+                            <property name="command" type="command" cbtype="scale">_do_volume_changed</property>
+                            <property name="from_">0</property>
+                            <property name="orient">horizontal</property>
+                            <property name="to">100</property>
+                            <property name="value">33</property>
+                            <property name="variable">int:_current_volume</property>
+                            <layout manager="pack">
+                              <property name="padx">9</property>
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Button" id="previous_button">
+                            <property name="command" type="command" cbtype="simple">_previous_song</property>
+                            <property name="state">disabled</property>
+                            <property name="width">3</property>
+                            <layout manager="pack">
+                              <property name="padx">8</property>
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Button" id="play_button">
+                            <property name="command" type="command" cbtype="simple">_toggle_play</property>
+                            <property name="state">disabled</property>
+                            <property name="width">3</property>
+                            <layout manager="pack">
+                              <property name="padx">8</property>
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Button" id="stop_button">
+                            <property name="command" type="command" cbtype="simple">_stop</property>
+                            <property name="state">disabled</property>
+                            <property name="width">3</property>
+                            <layout manager="pack">
+                              <property name="padx">8</property>
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Button" id="login_button">
+                            <property name="command" type="command" cbtype="simple">_login</property>
+                            <property name="width">3</property>
+                            <layout manager="pack">
+                              <property name="padx">9</property>
+                              <property name="side">right</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Button" id="download_button">
+                            <property name="command" type="command" cbtype="simple">_download</property>
+                            <property name="width">3</property>
+                            <layout manager="pack">
+                              <property name="padx">9</property>
+                              <property name="side">right</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Button" id="next_button">
+                            <property name="command" type="command" cbtype="simple">_next</property>
+                            <property name="state">disabled</property>
+                            <property name="width">3</property>
+                            <layout manager="pack">
+                              <property name="padx">8</property>
+                              <property name="side">left</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="pygubu.builder.widgets.toplevelmenu" id="toplevelmenu1">
+        <child>
+          <object class="tk.Menu" id="menu1">
+            <child>
+              <object class="tk.Menuitem.Submenu" id="submenu1">
+                <property name="label" translatable="yes">设置</property>
+                <property name="tearoff">false</property>
+                <child>
+                  <object class="tk.Menuitem.Command" id="command1">
+                    <property name="label" translatable="yes">导出</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

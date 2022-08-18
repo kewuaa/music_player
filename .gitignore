@@ -1,3 +1,4 @@
 .git
 .venv
 vlc-3.0.17.4
+**/__pycache__

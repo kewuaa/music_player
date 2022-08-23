@@ -24,12 +24,12 @@ class App(PlayerApp):
     """App."""
 
     SOURCE_OPTIONS = {
-        '酷狗': 'kg',
-        '酷我': 'kw',
-        '咪咕': 'mg',
-        'QQ': 'qq',
-        '千千静听': 'qqjt',
-        '网易云': 'wyy',
+        'kg': '酷狗',
+        'kw': '酷我',
+        'mg': '咪咕',
+        'qq': 'QQ',
+        'qqjt': '千千静听',
+        'wyy': '网易云',
     }
 
     def __init__(self) -> None:
@@ -55,77 +55,52 @@ class App(PlayerApp):
         self.__if_mute: bool = False
         self.__previous_search: str = None
         self.__previous_source: str = None
-
-    def __init_vlc(self) -> None:
-        """初始化vlc播放器."""
-
-        play_icon = self.__icons['play']
-        pause_icon = self.__icons['pause']
-
-        def format_time(time: int) -> str:
-            seconds = time / 1000
-            minutes = int(seconds // 60)
-            seconds -= minutes * 60
-            return f'{minutes:02d}:{int(seconds):02d}'
-
-        def on_play(event) -> None:
-            self.play_button.configure(image=pause_icon)
-            self.progress_bar.configure(state='normal')
-
-        def on_pause(event) -> None:
-            self.play_button.configure(image=play_icon)
-
-        def on_stop(event) -> None:
-            self.play_button.configure(image=play_icon)
-            self._current_pos.set(0)
-            self._current_length.set('--')
-            self._total_length.set('--')
-            self.progress_bar.configure(state='disabled')
-
-        def on_time_changed(event) -> None:
-            pos = self.__vlc.get_time()
-            self._current_pos.set(pos)
-            self._current_length.set(format_time(pos))
-
-        def on_length_changed(event) -> None:
-            length = self.__vlc.get_length()
-            self._total_length.set(format_time(length))
-            self.progress_bar.configure(to=str(length))
-
-        import vlc
-        global State
-        State = vlc.State
-        self.__vlc = vlc.Instance(
-            "--audio-visual=visual",
-            "--effect-list=spectrum",
-            "--effect-fft-window=flattop").media_player_new()
-        wm_id = self.audio_canvas.winfo_id()
-        if platform.system() == 'Windows':
-            self.__vlc.set_hwnd(wm_id)
-        else:
-            self.__vlc.set_xwindow(wm_id)
-        self.__vlc.audio_set_volume(
-            0 if self.__if_mute else self._current_volume.get())
-        manager = self.__vlc.event_manager()
-        manager.event_attach(
-            vlc.EventType.MediaPlayerTimeChanged, on_time_changed)
-        manager.event_attach(vlc.EventType.MediaPlayerPlaying, on_play)
-        manager.event_attach(vlc.EventType.MediaPlayerPaused, on_pause)
-        manager.event_attach(vlc.EventType.MediaPlayerStopped, on_stop)
-        manager.event_attach(
-            vlc.EventType.MediaPlayerLengthChanged, on_length_changed)
+        self.__lists = {
+            'play': [],
+            'download': [],
+        }
 
     def __init_ui(self) -> None:
         """init ui."""
 
-        options = list(self.SOURCE_OPTIONS.values())
+        def toggle_fullscreen(event) -> None:
+            """全屏切换."""
+
+            nonlocal if_fullscreen
+            if_fullscreen = not if_fullscreen
+            self.mainwindow.attributes('-fullscreen', if_fullscreen)
+
+        if_fullscreen = False
+        self.mainwindow.bind('<F11>', toggle_fullscreen)
+
+        def right_button_event(event, listbox: tk.Listbox) -> None:
+            if listbox.size() == 0:
+                return
+            index = listbox.nearest(event.y)
+            if index >= 0:
+                listbox.activate(index)
+            menubar.delete(0, 'end')
+            menubar.add_command(
+                label='移除', command=partial(listbox.delete, index))
+            menubar.post(event.x_root, event.y_root)
+
+        menubar = tk.Menu(master=self.mainwindow, tearoff=False)
+        self.play_listbox.bind(
+            '<Button-3>',
+            partial(right_button_event, listbox=self.play_listbox))
+        self.download_listbox.bind(
+            '<Button-3>',
+            partial(right_button_event, listbox=self.download_listbox))
+
+        options = list(self.SOURCE_OPTIONS.keys())
         self.sources_combobox.configure(
-            values=zip(options, self.SOURCE_OPTIONS.keys()))
+            values=zip(options, self.SOURCE_OPTIONS.values()))
         self.sources_combobox.set(options[0])
 
         create(self.sources_combobox, '选择歌曲来源')
         create(self.search_button, '点击进行搜索')
-        self.__tooltips['volume'] = create(
+        self.__tooltips['volume_button'] = create(self.volume_button, '静音')
+        self.__tooltips['volume_scale'] = create(
             self.volume_scale, str(self._current_volume.get()))
         create(self.previous_button, '上一曲')
         self.__tooltips['play'] = create(self.play_button, '播放')
@@ -169,6 +144,67 @@ class App(PlayerApp):
         await fit_widget(self.play_button, 'pause.png', False)
         await fit_widget(self.volume_button, 'sound_off.png', False)
 
+    def __init_vlc(self) -> None:
+        """初始化vlc播放器."""
+
+        play_icon = self.__icons['play']
+        pause_icon = self.__icons['pause']
+
+        def format_time(time: int) -> str:
+            seconds = time / 1000
+            minutes = int(seconds // 60)
+            seconds -= minutes * 60
+            return f'{minutes:02d}:{int(seconds):02d}'
+
+        def on_play(event) -> None:
+            self.play_button.configure(image=pause_icon)
+            self.progress_bar.configure(state='normal')
+            self.__tooltips['play'].text = '暂停'
+
+        def on_pause(event) -> None:
+            self.play_button.configure(image=play_icon)
+            self.__tooltips['play'].text = '播放'
+
+        def on_stop(event) -> None:
+            self.play_button.configure(image=play_icon)
+            self._current_pos.set(0)
+            self._current_length.set('--')
+            self._total_length.set('--')
+            self.progress_bar.configure(state='disabled')
+
+        def on_time_changed(event) -> None:
+            pos = self.__vlc.get_time()
+            self._current_pos.set(pos)
+            self._current_length.set(format_time(pos))
+
+        def on_length_changed(event) -> None:
+            length = self.__vlc.get_length()
+            self._total_length.set(format_time(length))
+            self.progress_bar.configure(to=str(length))
+
+        import vlc
+        global State
+        State = vlc.State
+        self.__vlc = vlc.Instance(
+            "--audio-visual=visual",
+            "--effect-list=spectrum",
+            "--effect-fft-window=flattop").media_player_new()
+        wm_id = self.audio_canvas.winfo_id()
+        if platform.system() == 'Windows':
+            self.__vlc.set_hwnd(wm_id)
+        else:
+            self.__vlc.set_xwindow(wm_id)
+        self.__vlc.audio_set_volume(
+            0 if self.__if_mute else self._current_volume.get())
+        manager = self.__vlc.event_manager()
+        manager.event_attach(
+            vlc.EventType.MediaPlayerTimeChanged, on_time_changed)
+        manager.event_attach(vlc.EventType.MediaPlayerPlaying, on_play)
+        manager.event_attach(vlc.EventType.MediaPlayerPaused, on_pause)
+        manager.event_attach(vlc.EventType.MediaPlayerStopped, on_stop)
+        manager.event_attach(
+            vlc.EventType.MediaPlayerLengthChanged, on_length_changed)
+
     def _search(self) -> None:
         """搜索."""
 
@@ -180,6 +216,17 @@ class App(PlayerApp):
         if name == self.__previous_search and \
                 source_name == self.__previous_source:
             return
+        menubar = tk.Menu(master=self.mainwindow, tearoff=False)
+
+        def right_button_event(event, item: SongInfo) -> None:
+            menubar.delete(0, 'end')
+            menubar.add_command(
+                label='添加至播放列表',
+                command=lambda: self._add_to_list(item, 'play'))
+            menubar.add_command(
+                label='添加至下载列表',
+                command=lambda: self._add_to_list(item, 'download'))
+            menubar.post(event.x_root, event.y_root)
 
         async def show_search_result() -> None:
             """获取搜索结果并展示."""
@@ -204,6 +251,8 @@ class App(PlayerApp):
             item_button = tk.ttk.Button(
                 master=frame, text=item.summary, style='Toolbutton',
                 command=lambda: self._play(item))
+            item_button.bind(
+                '<Button-3>', partial(right_button_event, item=item))
             frame.pack(side='top', expand=True, fill='both', pady=6, padx=3)
             item_button.pack(side='left', expand=True, fill='x')
 
@@ -238,17 +287,44 @@ class App(PlayerApp):
 
         asynctk.create_task(play())
 
+    def _add_to_list(self, item: SongInfo, type_: str) -> None:
+        """向列表中添加条目.
+
+        :param item: 需要添加的条目
+        :param type_: 列表类型
+        :returns: None
+        """
+
+        list_ = self.__lists[type_]
+        list_.append(item)
+        self.__getattribute__(f'{type_}_listbox').insert(
+            'end', ': '.join([self.SOURCE_OPTIONS[item.from_], item.summary]))
+
+    def _remove_from_list(self, index: int, type_: str) -> None:
+        """从列表中移除.
+
+        :param index: 需要移除项目的索引
+        :param type_: 列表类型
+        :returns: None
+        """
+
+        list_ = self.__lists[type_]
+        list_.pop(index)
+        self.__getattribute__(f'{type_}_listbox').delete(index)
+
     def _toggle_mute(self) -> None:
         """音量按钮事件."""
 
         if self.__if_mute:
             self.volume_scale.configure(state='normal')
             self.volume_button.configure(image=self.__icons['sound_on'])
+            self.__tooltips['volume_button'].text = '静音'
             if self.__vlc is not None:
                 self.__vlc.audio_set_volume(self._current_volume.get())
         else:
             self.volume_scale.configure(state='disabled')
             self.volume_button.configure(image=self.__icons['sound_off'])
+            self.__tooltips['volume_button'].text = '恢复音量'
             if self.__vlc is not None:
                 self.__vlc.audio_set_volume(0)
         self.__if_mute = not self.__if_mute
@@ -279,7 +355,7 @@ class App(PlayerApp):
         """音量改变事件."""
 
         volume = self._current_volume.get()
-        self.__tooltips['volume'].text = str(volume)
+        self.__tooltips['volume_scale'].text = str(volume)
         if self.__vlc is not None:
             self.__vlc.audio_set_volume(volume)
 
@@ -287,4 +363,6 @@ class App(PlayerApp):
         """退出App."""
 
         if self.__vlc is not None:
+            if self.__vlc.is_playing():
+                self.__vlc.stop()
             self.__vlc.release()

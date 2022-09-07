@@ -1,5 +1,6 @@
 from functools import partial
 from pathlib import Path
+from tkinter import filedialog
 import tkinter as tk
 import importlib
 import platform
@@ -17,7 +18,6 @@ from pymusic.lib import asynctk
 
 
 current_path = Path(__file__).parent
-os.environ['PYTHON_VLC_MODULE_PATH'] = './vlc-3.0.17.4'
 
 
 class App(PlayerApp):
@@ -42,16 +42,19 @@ class App(PlayerApp):
 
         self.__init_attr()
         self.__init_ui()
+        self.__init_bind()
         asynctk.create_task(self.__init_icon())
 
     def __init_attr(self) -> None:
         """init attributes."""
 
+        self.__vlc_path = './vlc-3.0.17.4'
         self.__loop: asyncio.base_events.BaseEventLoop = asynctk._callback_loop
         self.__source_dict = {}
         self.__icons = {}
         self.__tooltips = {}
         self.__vlc = None
+        self.__source_url = None
         self.__if_mute: bool = False
         self.__previous_search: str = None
         self.__previous_source: str = None
@@ -59,6 +62,8 @@ class App(PlayerApp):
             'play': [],
             'download': [],
         }
+        self.__play_mode = 0
+        self.__music_list = []
 
     def __init_ui(self) -> None:
         """init ui."""
@@ -73,7 +78,8 @@ class App(PlayerApp):
         if_fullscreen = False
         self.mainwindow.bind('<F11>', toggle_fullscreen)
 
-        def right_button_event(event, listbox: tk.Listbox) -> None:
+        def right_button_event(event, type_: str) -> None:
+            listbox: tk.Listbox = self.__getattribute__(f'{type_}_listbox')
             if listbox.size() == 0:
                 return
             index = listbox.nearest(event.y)
@@ -81,16 +87,31 @@ class App(PlayerApp):
                 listbox.activate(index)
             menubar.delete(0, 'end')
             menubar.add_command(
-                label='移除', command=partial(listbox.delete, index))
+                label='移除',
+                command=partial(self._remove_from_list, index, type_))
             menubar.post(event.x_root, event.y_root)
+
+        def double_click_event(event, type_: str) -> None:
+            listbox: tk.Listbox = self.__getattribute__(f'{type_}_listbox')
+            if listbox.size() == 0:
+                return
+            index = listbox.nearest(event.y)
+            list_ = self.__lists[type_]
+            self._play(list_[index])
 
         menubar = tk.Menu(master=self.mainwindow, tearoff=False)
         self.play_listbox.bind(
             '<Button-3>',
-            partial(right_button_event, listbox=self.play_listbox))
+            partial(right_button_event, type_='play'))
         self.download_listbox.bind(
             '<Button-3>',
-            partial(right_button_event, listbox=self.download_listbox))
+            partial(right_button_event, type_='download'))
+        self.play_listbox.bind(
+            '<Double-Button-1>',
+            partial(double_click_event, type_='play'))
+        self.download_listbox.bind(
+            '<Double-Button-1>',
+            partial(double_click_event, type_='download'))
 
         options = list(self.SOURCE_OPTIONS.keys())
         self.sources_combobox.configure(
@@ -108,6 +129,26 @@ class App(PlayerApp):
         create(self.next_button, '下一曲')
         create(self.download_button, '点击下载列表内的歌曲')
         create(self.login_button, '点击登录')
+
+        self.search_entry.focus_set()
+
+    def __init_bind(self) -> None:
+        """ init binds """
+
+        def forward(event) -> None:
+            if self.__vlc is not None:
+                pos = self.__vlc.get_time()
+                self.__vlc.set_time(pos + 1000)
+
+        def backward(event) -> None:
+            if self.__vlc is not None:
+                pos = self.__vlc.get_time()
+                if pos > 1000:
+                    self.__vlc.set_time(pos - 1000)
+
+        self.mainwindow.bind('<Right>', forward)
+        self.mainwindow.bind('<Left>', backward)
+        self.search_entry.bind('<Return>', lambda event: self._search())
 
     async def __init_icon(self) -> None:
         """init icons."""
@@ -144,66 +185,101 @@ class App(PlayerApp):
         await fit_widget(self.play_button, 'pause.png', False)
         await fit_widget(self.volume_button, 'sound_off.png', False)
 
-    def __init_vlc(self) -> None:
+    def __init_vlc(self) -> asyncio.futures.Future:
         """初始化vlc播放器."""
 
-        play_icon = self.__icons['play']
-        pause_icon = self.__icons['pause']
+        def check_path() -> bool:
+            return not (Path(self.__vlc_path) / 'libvlc.dll').exists()
 
-        def format_time(time: int) -> str:
-            seconds = time / 1000
-            minutes = int(seconds // 60)
-            seconds -= minutes * 60
-            return f'{minutes:02d}:{int(seconds):02d}'
-
-        def on_play(event) -> None:
-            self.play_button.configure(image=pause_icon)
-            self.progress_bar.configure(state='normal')
-            self.__tooltips['play'].text = '暂停'
-
-        def on_pause(event) -> None:
-            self.play_button.configure(image=play_icon)
-            self.__tooltips['play'].text = '播放'
-
-        def on_stop(event) -> None:
-            self.play_button.configure(image=play_icon)
-            self._current_pos.set(0)
-            self._current_length.set('--')
-            self._total_length.set('--')
-            self.progress_bar.configure(state='disabled')
-
-        def on_time_changed(event) -> None:
-            pos = self.__vlc.get_time()
-            self._current_pos.set(pos)
-            self._current_length.set(format_time(pos))
-
-        def on_length_changed(event) -> None:
-            length = self.__vlc.get_length()
-            self._total_length.set(format_time(length))
-            self.progress_bar.configure(to=str(length))
-
+        while check_path():
+            tk.messagebox.showwarning(
+                title='warning',
+                message='vlc not found, please choose one existed vlc path')
+            self._set_vlc_path()
+        os.environ['PYTHON_VLC_MODULE_PATH'] = self.__vlc_path
         import vlc
         global State
         State = vlc.State
-        self.__vlc = vlc.Instance(
-            "--audio-visual=visual",
-            "--effect-list=spectrum",
-            "--effect-fft-window=flattop").media_player_new()
-        wm_id = self.audio_canvas.winfo_id()
-        if platform.system() == 'Windows':
-            self.__vlc.set_hwnd(wm_id)
-        else:
-            self.__vlc.set_xwindow(wm_id)
-        self.__vlc.audio_set_volume(
-            0 if self.__if_mute else self._current_volume.get())
-        manager = self.__vlc.event_manager()
-        manager.event_attach(
-            vlc.EventType.MediaPlayerTimeChanged, on_time_changed)
-        manager.event_attach(vlc.EventType.MediaPlayerPlaying, on_play)
-        manager.event_attach(vlc.EventType.MediaPlayerPaused, on_pause)
-        manager.event_attach(vlc.EventType.MediaPlayerStopped, on_stop)
-        manager.event_attach(
-            vlc.EventType.MediaPlayerLengthChanged, on_length_changed)
+
+        def init_vlc() -> asyncio.futures.Future:
+            def init():
+                return vlc.Instance(
+                    "--audio-visual=visual",
+                    "--effect-list=spectrum",
+                    "--effect-fft-window=flattop").media_player_new()
+
+            def callback():
+                loop = asyncio.events.get_running_loop()
+                fut = loop.run_in_executor(None, init)
+                asyncio.futures._chain_future(fut, future)
+
+            self.__loop.call_soon_threadsafe(callback)
+
+        def init_callback(future: asyncio.futures.Future) -> None:
+            play_icon = self.__icons['play']
+            pause_icon = self.__icons['pause']
+
+            def format_time(time: int) -> str:
+                seconds = time / 1000
+                minutes = int(seconds // 60)
+                seconds -= minutes * 60
+                return f'{minutes:02d}:{int(seconds):02d}'
+
+            def on_play(event) -> None:
+                self.play_button.configure(image=pause_icon)
+                self.progress_bar.configure(state='normal')
+                self.__tooltips['play'].text = '暂停'
+
+            def on_pause(event) -> None:
+                self.play_button.configure(image=play_icon)
+                self.__tooltips['play'].text = '播放'
+
+            def on_stop(event) -> None:
+                self.play_button.configure(image=play_icon)
+                self.__tooltips['play'].text = '播放'
+                self._current_pos.set(0)
+                self._current_length.set('--')
+                self._total_length.set('--')
+                self.progress_bar.configure(state='disabled')
+
+            def on_time_changed(event) -> None:
+                pos = self.__vlc.get_time()
+                self._current_pos.set(pos)
+                self._current_length.set(format_time(pos))
+
+            def on_length_changed(event) -> None:
+                length = self.__vlc.get_length()
+                self._total_length.set(format_time(length))
+                self.progress_bar.configure(to=str(length))
+
+            self.__vlc = future.result()
+            wm_id = self.audio_canvas.winfo_id()
+            if platform.system() == 'Windows':
+                self.__vlc.set_hwnd(wm_id)
+            else:
+                self.__vlc.set_xwindow(wm_id)
+            self.__vlc.audio_set_volume(
+                0 if self.__if_mute else self._current_volume.get())
+            manager = self.__vlc.event_manager()
+            manager.event_attach(
+                vlc.EventType.MediaPlayerTimeChanged, on_time_changed)
+            manager.event_attach(vlc.EventType.MediaPlayerPlaying, on_play)
+            manager.event_attach(vlc.EventType.MediaPlayerPaused, on_pause)
+            manager.event_attach(vlc.EventType.MediaPlayerStopped, on_stop)
+            manager.event_attach(
+                vlc.EventType.MediaPlayerLengthChanged, on_length_changed)
+
+        future = self.__loop.create_future()
+        future.add_done_callback(init_callback)
+        self.status_line.configure(
+            text='init vlc, please wait for a minute')
+        future.add_done_callback(
+            lambda future: [
+                self.status_line.configure(text='init complete'),
+                self.mainwindow.after(
+                    300, lambda: self.status_line.configure(text=''))])
+        init_vlc()
+        return future
 
     def _search(self) -> None:
         """搜索."""
@@ -271,21 +347,34 @@ class App(PlayerApp):
         :returns: None
         """
 
-        if self.__vlc is None:
-            self.__init_vlc()
-            for widget in [self.previous_button,
-                           self.play_button,
-                           self.stop_button,
-                           self.next_button]:
-                widget.configure(state='normal')
-
         async def play() -> None:
             source: SourceModel = self.__source_dict[item.from_]
-            url = await source._get_source(item.id_)
+            self.__source_url = url = await source._get_source(item.id_)
             self.__vlc.set_mrl(url)
             self.__vlc.play()
 
-        asynctk.create_task(play())
+        if self.__vlc is None:
+            def callback(fut):
+                asynctk.create_task(play())
+                for widget in [self.previous_button,
+                               self.play_button,
+                               self.stop_button,
+                               self.next_button]:
+                    widget.configure(state='normal')
+
+            self.__init_vlc().add_done_callback(callback)
+        else:
+            asynctk.create_task(play())
+
+    def _previous_song(self) -> None:
+        """上一曲."""
+
+        pass
+
+    def _next_song(self) -> None:
+        """下一曲."""
+
+        pass
 
     def _add_to_list(self, item: SongInfo, type_: str) -> None:
         """向列表中添加条目.
@@ -337,7 +426,10 @@ class App(PlayerApp):
             self.__vlc.pause()
         elif state == State.Paused:
             self.__vlc.set_pause(0)
-        else:
+        elif state == State.Stopped:
+            self.__vlc.play()
+        elif state == State.Ended:
+            self.__vlc.set_mrl(self.__source_url)
             self.__vlc.play()
 
     def _stop(self) -> None:
@@ -358,6 +450,16 @@ class App(PlayerApp):
         self.__tooltips['volume_scale'].text = str(volume)
         if self.__vlc is not None:
             self.__vlc.audio_set_volume(volume)
+
+    def _set_vlc_path(self) -> None:
+        """ 设置vlc路径. """
+
+        res = filedialog.askdirectory(title='choose vlc path')
+        if res:
+            self.__vlc_path = res
+            if self.__vlc is not None:
+                self.__vlc.release()
+                self.__vlc = None
 
     async def quit(self) -> None:
         """退出App."""

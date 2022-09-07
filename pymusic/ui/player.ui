@@ -113,6 +113,7 @@
                     </child>
                     <child>
                       <object class="ttk.Entry" id="search_entry">
+                        <property name="takefocus">true</property>
                         <property name="width">49</property>
                         <layout manager="pack">
                           <property name="expand">true</property>
@@ -322,7 +323,7 @@
                         </child>
                         <child>
                           <object class="ttk.Button" id="next_button">
-                            <property name="command" type="command" cbtype="simple">_next</property>
+                            <property name="command" type="command" cbtype="simple">_next_song</property>
                             <property name="state">disabled</property>
                             <property name="width">3</property>
                             <layout manager="pack">
@@ -351,13 +352,23 @@
                 <property name="tearoff">false</property>
                 <child>
                   <object class="tk.Menuitem.Command" id="command1">
-                    <property name="label" translatable="yes">导出</property>
+                    <property name="command" type="command" cbtype="simple">_set_vlc_path</property>
+                    <property name="label" translatable="yes">vlc path</property>
                   </object>
                 </child>
               </object>
             </child>
           </object>
         </child>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Label" id="status_line">
+        <property name="relief">flat</property>
+        <layout manager="pack">
+          <property name="fill">x</property>
+          <property name="side">top</property>
+        </layout>
       </object>
     </child>
   </object>

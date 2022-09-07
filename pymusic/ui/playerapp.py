@@ -36,7 +36,7 @@ class PlayerApp:
         self.sources_combobox.configure(keyvariable=self._current_source, width=6)
         self.sources_combobox.pack(side="left")
         self.search_entry = ttk.Entry(self.frame11)
-        self.search_entry.configure(width=49)
+        self.search_entry.configure(takefocus=True, width=49)
         self.search_entry.pack(expand="true", fill="x", padx=9, side="left")
         self.search_button = ttk.Button(self.frame11)
         self.search_button.configure(width=3)
@@ -110,7 +110,7 @@ class PlayerApp:
         self.next_button = ttk.Button(self.frame15)
         self.next_button.configure(state="disabled", width=3)
         self.next_button.pack(padx=8, side="left")
-        self.next_button.configure(command=self._next)
+        self.next_button.configure(command=self._next_song)
         self.frame15.configure(height=200, width=800)
         self.frame15.pack(expand="true", fill="x", side="top")
         self.frame13.configure(height=200, relief="groove", width=200)
@@ -124,8 +124,12 @@ class PlayerApp:
         self.submenu1 = tk.Menu(self.menu1, tearoff="false")
         self.menu1.add(tk.CASCADE, menu=self.submenu1, label="…Ë÷√")
         self.mi_command1 = 0
-        self.submenu1.add("command", label="µº≥ˆ")
+        self.submenu1.add("command", label="vlc path")
+        self.submenu1.entryconfigure(self.mi_command1, command=self._set_vlc_path)
         self.toplevel.configure(menu=self.menu1)
+        self.status_line = ttk.Label(self.toplevel)
+        self.status_line.configure(relief="flat")
+        self.status_line.pack(fill="x", side="top")
         self.toplevel.configure(height=200, width=200)
         self.toplevel.title("^3^")
 
@@ -162,7 +166,10 @@ class PlayerApp:
     def _download(self):
         pass
 
-    def _next(self):
+    def _next_song(self):
+        pass
+
+    def _set_vlc_path(self):
         pass
 
 

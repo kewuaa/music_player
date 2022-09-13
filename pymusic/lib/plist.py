@@ -1,72 +1,86 @@
 from tkinter import StringVar
+import tkinter as tk
 
 
-class PlayList(list):
-
-    def __init__(self, *args, listvar: StringVar, **kwargs) -> None:
-        """初始化."""
-
-        super().__init__(*args, **kwargs)
+class PlayList:
+    def __init__(self, listbox: tk.Listbox) -> None:
+        self.__box = listbox
+        self.__var = StringVar(value="")
+        self.__list = []
         self.__index: int = None
-        self.__listvar: StringVar = listvar
+        listbox.configure(listvariable=self.__var)
 
-    def __update_listvar(self) -> None:
-        self.__listvar.set(tuple(item.summary for item in self))
+    def __iter__(self):
+        return iter(self.__list)
 
-    def append(self, object):
-        result = super().append(object)
-        self.__update_listvar()
-        return result
+    def __getitem__(self, index: int):
+        assert type(index) is int
+        return self.__list[index]
 
-    def insert(self, index, object):
-        result = super().insert(index, object)
-        self.__update_listvar()
-        return result
+    def __setitem__(self, index: int, value):
+        assert type(index) is int
+        self.__list[index] = value
 
-    def pop(self, index):
-        result = super().pop(index)
-        self.__update_listvar()
-        return result
+    def __update(self) -> None:
+        self.__var.set(tuple(item.summary for item in self.__list))
 
-    def remove(self, value):
-        result = super().remove(value)
-        self.__update_listvar()
-        return result
+    def __activate(self, index: int = None) -> None:
+        index = index or self.__index
+        self.__box.activate(index)
+        self.__box.selection_clear(0, 'end')
+        self.__box.selection_set(index)
+
+    def empty(self) -> bool:
+        return bool(not self.__list)
+
+    def response(self, event: tk.Event) -> int:
+        if not self.__list:
+            return
+        index = self.__box.nearest(event.y)
+        x, y, w, h = self.__box.bbox(index)
+        if event.y > y + h:
+            return
+        self.__box.activate(index)
+        return index
 
     def check_index(self) -> bool:
-        """检查是否设置索引."""
-
         return self.__index is not None
 
-    def set_index(self, index: int) -> None:
-        """设置当前索引.
-
-        :param index: 索引
-        :returns: None
-        """
-
-        assert type(index) is int
-        self.__index = index
-
     def get_index(self) -> int:
-        """返回当前索引."""
-
+        if self.__index is None:
+            raise RuntimeError('index not set yet')
         return self.__index
 
-    def next(self):
-        """返回下一个."""
+    def set_index(self, index: int) -> None:
+        assert type(index) is int
+        if not 0 <= index < len(self.__list):
+            raise RuntimeError('index out of range')
+        self.__index = index
+        self.__activate(index)
 
+    def append(self, item) -> None:
+        self.__list.append(item)
+        self.__update()
+
+    def pop(self, index: int):
+        result = self.__list.pop(index)
+        self.__update()
+        return result
+
+    def remove(self, value) -> None:
+        self.__list.remove(value)
+        self.__update()
+
+    def next(self):
         self.__index += 1
-        if self.__index >= self.__len__():
+        if self.__index >= len(self.__list):
             return
-        v = self[self.__index]
-        return v
+        self.__activate()
+        return self.__list[self.__index]
 
     def previous(self):
-        """返回上一个."""
-
         self.__index -= 1
         if self.__index < 0:
             return
-        v = self[self.__index]
-        return v
+        self.__activate()
+        return self.__list[self.__index]

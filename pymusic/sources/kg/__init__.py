@@ -53,12 +53,14 @@ class Source(SourceModel):
             album_name = data['AlbumName']
             album_id = data['AlbumID']
             file_hash = data['FileHash']
-            summary = f'{song_name} -> {singer_name}'
+            summary = [song_name, singer_name]
             if album_name:
-                summary += f' -> 《{album_name}》'
+                summary.append(album_name)
+            summary = ' -> '.join(summary)
             source_id = album_id, file_hash
             ext_name = data['ExtName']
-            info = SongInfo(summary=summary, id_=source_id, type_=ext_name, from_='kg')
+            info = SongInfo(
+                summary=summary, id_=source_id, type_=ext_name, from_='kg')
             return info
 
         return [parse(item) for item in data]
@@ -86,9 +88,11 @@ class Source(SourceModel):
             'uuid': time_stamp,
             'dfid': '-',
         }
-        key_str = self.KEY + \
-            ''.join(f'{k}={params[k]}' for k in sorted(params)) + \
-            self.KEY
+        key_str = self.KEY.join([
+            '',
+            ''.join(f'{k}={params[k]}' for k in sorted(params)),
+            '',
+        ])
         signature = md5(key_str.encode()).hexdigest()
         params['signature'] = signature
         sess: ClientSession = await self._sess

@@ -2,7 +2,6 @@ import sys
 import asyncio
 sys.path.append('.')
 import pymusic
-from pymusic.sources.kg import kg
 
 
 pymusic.run()

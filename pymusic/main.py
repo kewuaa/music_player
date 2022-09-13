@@ -5,19 +5,45 @@ import tkinter as tk
 import importlib
 import platform
 import asyncio
+import logging
 import os
 
 from pygubu.widgets.simpletooltip import create
+from aiohttp import request
 from PIL import ImageTk
 from PIL import Image
 
 from pymusic.sources.model import SourceModel
 from pymusic.sources.model import SongInfo
 from pymusic.ui.playerapp import PlayerApp
+from pymusic.lib.plist import PlayList
 from pymusic.lib import asynctk
+from pymusic.lib import aiofile
 
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 current_path = Path(__file__).parent
+data_path = Path(os.environ['Appdata']) / '^3^' / 'data'
+if not data_path.exists():
+    data_path.mkdir(parents=True)
+
+
+async def download(url: str, name: str) -> None:
+    """下载.
+
+    :param url: 资源链接
+    :param name: 资源名称
+    :returns: None
+    """
+
+    path = data_path / name
+    if path.exists():
+        logger.info(f'{name} already exists')
+        return
+    async with request('GET', url) as res:
+        async with aiofile.async_open(path, 'wb') as f:
+            await f.write(await res.read())
 
 
 class App(PlayerApp):
@@ -59,11 +85,10 @@ class App(PlayerApp):
         self.__previous_search: str = None
         self.__previous_source: str = None
         self.__lists = {
-            'play': [],
-            'download': [],
+            'play': PlayList(listvar=self._play_list),
+            'download': PlayList(listvar=self._download_list),
         }
-        self.__play_mode = 0
-        self.__music_list = []
+        self.__current_list: PlayList = None
 
     def __init_ui(self) -> None:
         """init ui."""
@@ -85,18 +110,32 @@ class App(PlayerApp):
             index = listbox.nearest(event.y)
             if index >= 0:
                 listbox.activate(index)
+                listbox.selection_clear(0, 'end')
+                listbox.selection_set(index)
             menubar.delete(0, 'end')
             menubar.add_command(
                 label='移除',
                 command=partial(self._remove_from_list, index, type_))
+            menubar.add_command(
+                label='下载',
+                command=lambda: asynctk.create_task(
+                    self.__download_one(self.__lists[type_][index]),
+                ).add_done_callback(
+                    lambda fut: self.__lists[type_].remove(
+                        fut.result(),
+                    ) if type_ == 'download' else None,
+                ))
             menubar.post(event.x_root, event.y_root)
 
         def double_click_event(event, type_: str) -> None:
             listbox: tk.Listbox = self.__getattribute__(f'{type_}_listbox')
             if listbox.size() == 0:
                 return
+            for widget in [self.previous_button, self.next_button]:
+                widget.configure(state='normal')
             index = listbox.nearest(event.y)
-            list_ = self.__lists[type_]
+            self.__current_list = list_ = self.__lists[type_]
+            list_.set_index(index)
             self._play(list_[index])
 
         menubar = tk.Menu(master=self.mainwindow, tearoff=False)
@@ -241,6 +280,8 @@ class App(PlayerApp):
                 self._current_length.set('--')
                 self._total_length.set('--')
                 self.progress_bar.configure(state='disabled')
+                if self.__vlc.get_state() == State.Ended:
+                    self.__switch_song(next_=True)
 
             def on_time_changed(event) -> None:
                 pos = self.__vlc.get_time()
@@ -262,22 +303,31 @@ class App(PlayerApp):
                 0 if self.__if_mute else self._current_volume.get())
             manager = self.__vlc.event_manager()
             manager.event_attach(
-                vlc.EventType.MediaPlayerTimeChanged, on_time_changed)
-            manager.event_attach(vlc.EventType.MediaPlayerPlaying, on_play)
-            manager.event_attach(vlc.EventType.MediaPlayerPaused, on_pause)
-            manager.event_attach(vlc.EventType.MediaPlayerStopped, on_stop)
+                vlc.EventType.MediaPlayerTimeChanged,
+                on_time_changed,
+            )
             manager.event_attach(
-                vlc.EventType.MediaPlayerLengthChanged, on_length_changed)
+                vlc.EventType.MediaPlayerPlaying,
+                on_play,
+            )
+            manager.event_attach(
+                vlc.EventType.MediaPlayerPaused,
+                on_pause,
+            )
+            manager.event_attach(
+                vlc.EventType.MediaPlayerStopped,
+                on_stop,
+            )
+            manager.event_attach(
+                vlc.EventType.MediaPlayerLengthChanged,
+                on_length_changed,
+            )
 
         future = self.__loop.create_future()
         future.add_done_callback(init_callback)
-        self.status_line.configure(
-            text='init vlc, please wait for a minute')
+        self.__log('init vlc, please wait for a minute')
         future.add_done_callback(
-            lambda future: [
-                self.status_line.configure(text='init complete'),
-                self.mainwindow.after(
-                    300, lambda: self.status_line.configure(text=''))])
+            lambda future: self.__log('', time=1000))
         init_vlc()
         return future
 
@@ -302,6 +352,9 @@ class App(PlayerApp):
             menubar.add_command(
                 label='添加至下载列表',
                 command=lambda: self._add_to_list(item, 'download'))
+            menubar.add_command(
+                label='下载',
+                command=lambda: asynctk.create_task(self.__download_one(item)))
             menubar.post(event.x_root, event.y_root)
 
         async def show_search_result() -> None:
@@ -340,6 +393,25 @@ class App(PlayerApp):
         for item in old_items:
             item.destroy()
 
+    async def _play_source(self, item: SongInfo) -> None:
+        """播放资源.
+
+        :param item: 歌曲信息
+        :returns: None
+        """
+
+        path = data_path / '.'.join([
+            item.summary.replace(' -> ', '-'),
+            item.type_,
+        ])
+        if path.exists():
+            self.__source_url = str(path)
+        else:
+            source: SourceModel = self.__source_dict[item.from_]
+            self.__source_url = await source._get_source(item.id_)
+        self.__vlc.set_mrl(self.__source_url)
+        self.__vlc.play()
+
     def _play(self, item: SongInfo) -> None:
         """播放歌曲.
 
@@ -347,34 +419,47 @@ class App(PlayerApp):
         :returns: None
         """
 
-        async def play() -> None:
-            source: SourceModel = self.__source_dict[item.from_]
-            self.__source_url = url = await source._get_source(item.id_)
-            self.__vlc.set_mrl(url)
-            self.__vlc.play()
-
         if self.__vlc is None:
             def callback(fut):
-                asynctk.create_task(play())
-                for widget in [self.previous_button,
-                               self.play_button,
-                               self.stop_button,
-                               self.next_button]:
+                asynctk.create_task(self._play_source(item))
+                for widget in [self.stop_button, self.play_button]:
                     widget.configure(state='normal')
 
             self.__init_vlc().add_done_callback(callback)
         else:
-            asynctk.create_task(play())
+            asynctk.create_task(self._play_source(item))
 
-    def _previous_song(self) -> None:
-        """上一曲."""
-
-        pass
+    def __switch_song(self, next_: bool) -> None:
+        if self.__current_list is None\
+                or not self.__current_list.check_index():
+            return
+        item: SongInfo = \
+            self.__current_list.next() if next_ \
+            else self.__current_list.previous()
+        if item is None:
+            i = 0 if next_ else -1
+            item = self.__current_list[i]
+            self.__current_list.set_index(i)
+        index = self.__current_list.get_index()
+        if self.__current_list is self.__lists['play']:
+            self.play_listbox.activate(index)
+            self.play_listbox.selection_clear(0, 'end')
+            self.play_listbox.selection_set(index)
+        else:
+            self.download_listbox.activate(index)
+            self.download_listbox.selection_clear(0, 'end')
+            self.download_listbox.selection_set(index)
+        asynctk.create_task(self._play_source(item))
 
     def _next_song(self) -> None:
         """下一曲."""
 
-        pass
+        self.__switch_song(next_=True)
+
+    def _previous_song(self) -> None:
+        """上一曲."""
+
+        self.__switch_song(next_=False)
 
     def _add_to_list(self, item: SongInfo, type_: str) -> None:
         """向列表中添加条目.
@@ -385,9 +470,10 @@ class App(PlayerApp):
         """
 
         list_ = self.__lists[type_]
+        if item in list_:
+            tk.messagebox.showinfo('info', 'the song is already in')
+            return
         list_.append(item)
-        self.__getattribute__(f'{type_}_listbox').insert(
-            'end', ': '.join([self.SOURCE_OPTIONS[item.from_], item.summary]))
 
     def _remove_from_list(self, index: int, type_: str) -> None:
         """从列表中移除.
@@ -399,7 +485,6 @@ class App(PlayerApp):
 
         list_ = self.__lists[type_]
         list_.pop(index)
-        self.__getattribute__(f'{type_}_listbox').delete(index)
 
     def _toggle_mute(self) -> None:
         """音量按钮事件."""
@@ -460,6 +545,49 @@ class App(PlayerApp):
             if self.__vlc is not None:
                 self.__vlc.release()
                 self.__vlc = None
+
+    async def __download_one(self, item: SongInfo) -> SongInfo:
+        """下载单曲."""
+
+        source: SourceModel = self.__source_dict[item.from_]
+        url = await source._get_source(item.id_)
+        name = '.'.join([item.summary.replace(' -> ', '-'), item.type_])
+        await download(url, name)
+        return item
+
+    def _download(self) -> None:
+        """下载."""
+
+        async def download_start():
+            tasks = []
+            for item in list_:
+                task = self.__loop.create_task(self.__download_one(item))
+                task.add_done_callback(lambda fut: list_.remove(fut.result()))
+                tasks.append(task)
+            for task in tasks:
+                await task
+            self.__log('下载完成', time=1000)
+
+        list_ = self.__lists['download']
+        if not list_:
+            tk.messagebox.showinfo('info', 'no song in download list')
+            return
+        asynctk.create_task(download_start())
+
+    def __log(self, msg: str, time: int = -1) -> None:
+        """打印状态栏消息.
+
+        :param msg: 需要打印的信息
+        :param time: 打印后多久消失
+        :returns: None
+        """
+
+        self.status_line.configure(text=msg)
+        if time > 0:
+            self.mainwindow.after(
+                time,
+                lambda: self.status_line.configure(text=''),
+            )
 
     async def quit(self) -> None:
         """退出App."""

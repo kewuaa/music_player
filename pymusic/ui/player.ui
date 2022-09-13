@@ -38,6 +38,7 @@
                         </layout>
                         <child>
                           <object class="tk.Listbox" id="play_listbox">
+                            <property name="listvariable">string:_play_list</property>
                             <layout manager="pack">
                               <property name="expand">true</property>
                               <property name="fill">both</property>
@@ -63,6 +64,7 @@
                         </layout>
                         <child>
                           <object class="tk.Listbox" id="download_listbox">
+                            <property name="listvariable">string:_download_list</property>
                             <layout manager="pack">
                               <property name="expand">true</property>
                               <property name="fill">both</property>
@@ -171,7 +173,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Frame" id="frame13">
+                  <object class="ttk.Frame" id="buttons_frame">
                     <property name="height">200</property>
                     <property name="relief">groove</property>
                     <property name="width">200</property>
@@ -260,7 +262,7 @@
                             <property name="from_">0</property>
                             <property name="orient">horizontal</property>
                             <property name="to">100</property>
-                            <property name="value">33</property>
+                            <property name="value">88</property>
                             <property name="variable">int:_current_volume</property>
                             <layout manager="pack">
                               <property name="padx">9</property>

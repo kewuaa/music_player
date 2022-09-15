@@ -38,9 +38,15 @@ class SourceModel:
             'headers': self._headers,
             'loop': self._loop,
         }
+        await self._init_cookies()
         if self._cookies:
             kwargs['cookies'] = self._cookies
         return ClientSession(**kwargs)
+
+    async def _init_cookies(self) -> None:
+        """初始化cookie."""
+
+        pass
 
     async def _get_info(self, name: str) -> list:
         """检索获取信息.
@@ -58,6 +64,16 @@ class SourceModel:
         """
         raise NotImplementedError
 
+    async def _login(self, username: str, password: str) -> None:
+        """登录.
+
+        :param username: 账号
+        :param password: 密码
+        :returns: None
+        """
+
+        pass
+
     def _cookie_str2dict(self, cookies: str) -> None:
         """将cookie字符串转换为字典.
 
@@ -65,8 +81,10 @@ class SourceModel:
         :returns: cookie字典
         """
 
-        return {cookie.key: cookie.value
-                for cookie in SimpleCookie(cookies).values()}
+        return {
+            cookie.key: cookie.value
+            for cookie in SimpleCookie(cookies).values()
+        }
 
     def _get_time_stamp(self, bit: int = 10) -> int:
         """获取时间戳.

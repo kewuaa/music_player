@@ -147,7 +147,7 @@ class App(PlayerApp):
         options = list(self.SOURCE_OPTIONS.keys())
         self.sources_combobox.configure(
             values=zip(options, self.SOURCE_OPTIONS.values()))
-        self.sources_combobox.set(options[0])
+        self.sources_combobox.set(options[2])
 
         create(self.sources_combobox, '选择歌曲来源')
         create(self.search_button, '点击进行搜索')
@@ -426,7 +426,6 @@ class App(PlayerApp):
             self.__source_url = str(path)
         else:
             source: SourceModel = self.__source_dict[item.from_]
-            print(item)
             self.__source_url = await source._get_source(item.id_)
         self.__vlc.set_mrl(self.__source_url)
         self.__vlc.play()
@@ -558,6 +557,20 @@ class App(PlayerApp):
             tk.messagebox.showinfo('info', 'no song in download list')
             return
         asynctk.create_task(download_start())
+
+    def _login(self) -> None:
+        """登录."""
+
+        source_name = self._current_source.get()
+        if self.__source_dict.get(source_name) is None:
+            source: SourceModel = importlib.import_module(
+                'pymusic.sources.' + source_name).Source(self.__loop)
+            asynctk.add_done_before_exit(source.exit)
+            self.__source_dict[source_name] = source
+        else:
+            source: SourceModel = \
+                self.__source_dict[self._current_source.get()]
+        asynctk.create_task(source._login('18975257216', 'hzy..17313100485'))
 
     def __log(self, msg: str, time: int = -1) -> None:
         """打印状态栏消息.

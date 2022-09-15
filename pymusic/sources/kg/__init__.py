@@ -20,14 +20,17 @@ class Source(SourceModel):
     def __init__(self, loop: asyncio.base_events.BaseEventLoop,
                  *, browser: str = None) -> None:
         super().__init__(loop, path=__file__, browser=browser)
-        self._compile = compile(r'{.*}')
-        self._init_mid()
+        self.__compile = compile(r'{.*}')
+        self.__appid = self._loop.create_task(self.__init__appid())
         self._headers.update({
             'origin': 'https://www.kugou.com',
             'refer': 'https://www.kugou.com/',
         })
 
-    def _init_mid(self) -> None:
+    async def _init_cookies(self) -> None:
+        self.__init_mid()
+
+    def __init_mid(self) -> None:
         """初始化kg_mid."""
 
         def e() -> str:
@@ -36,15 +39,24 @@ class Source(SourceModel):
 
         t = e() + e() + '-' + e() + '-' + e() + \
             '-' + e() + '-' + e() + e() + e()
+        # n为随机值, 可取固定值
         n = md5(t.encode()).hexdigest()
-        self._cookies['kg_mid'] = n
         self._cookies.update({
             'kg_mid': n,
-            'kg_dfid': '4XSVnN1pTe8A2jz9zb4UyqVS',
+            'kg_dfid': '0R7uJo1fXgP43wvGER4dHu2X',
             'kg_dfid_collect': 'd41d8cd98f00b204e9800998ecf8427e',
         })
 
-    def _parse_data(self, data: list) -> list:
+    async def __init__appid(self) -> str:
+        sess: ClientSession = await self._sess
+        pattenr = compile(r'appid=(\d*)')
+        url = 'https://www.kugou.com/'
+        res = await sess.get(url)
+        source_page = await res.text()
+        appid = pattenr.search(source_page).group(1)
+        return appid
+
+    def __parse_data(self, data: list) -> list:
         """解析data."""
 
         def parse(data: dict) -> SongInfo:
@@ -52,16 +64,20 @@ class Source(SourceModel):
             singer_name = data['SingerName']
             album_name = data['AlbumName']
             album_id = data['AlbumID']
+            album_audio_id = data['MixSongID']
             file_hash = data['FileHash']
             summary = [song_name, singer_name]
             if album_name:
                 summary.append(album_name)
             summary = ' -> '.join(summary)
-            source_id = album_id, file_hash
+            source_id = album_id, album_audio_id, file_hash
             ext_name = data['ExtName']
-            info = SongInfo(
-                summary=summary, id_=source_id, type_=ext_name, from_='kg')
-            return info
+            return SongInfo(
+                summary=summary,
+                id_=source_id,
+                type_=ext_name,
+                from_='kg',
+            )
 
         return [parse(item) for item in data]
 
@@ -98,33 +114,36 @@ class Source(SourceModel):
         sess: ClientSession = await self._sess
         res = await sess.get(self.SEARCH_URL, params=params)
         res_text = await res.text()
-        res_text = self._compile.findall(res_text)[0]
+        res_text = self.__compile.findall(res_text)[0]
         res_dict = json.loads(res_text)
         if res_dict.get('error_msg', 1):
             raise RuntimeError(
-                res_dict.get(
-                    'error_msg') or f'unknown error while searching {name}')
+                res_dict.get('error_msg') or f'\
+                unknown error while searching {name}',
+            )
         data = res_dict['data']['lists']
-        return self._parse_data(data)
+        return self.__parse_data(data)
 
     async def _get_source(self, source_id: tuple) -> str:
-        album_id, file_hash = source_id
+        album_id, album_audio_id, file_hash = source_id
         params = {
             'r': 'play/getdata',
             'callback': 'jQuery19108115856637359431_1660387571846',
             'hash': file_hash,
             'dfid': self._cookies['kg_dfid'],
-            'appid': '1014',
+            'appid': await self.__appid,
             'mid': self._cookies['kg_mid'],
             'platid': '4',
             '_': self._get_time_stamp(13),
         }
         if album_id:
             params['album_id'] = album_id
+        if album_audio_id:
+            params['album_audio_id'] = album_audio_id
         sess: ClientSession = await self._sess
         res = await sess.get(self.SOURCE_URL, params=params)
         res_str = await res.text()
-        res_str = self._compile.findall(res_str)[0]
+        res_str = self.__compile.findall(res_str)[0]
         res_dict = json.loads(res_str)
         if res_dict.get('err_code', 1):
             err_code = res_dict.get('err_code', 'unknow')

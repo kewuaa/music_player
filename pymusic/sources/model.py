@@ -9,7 +9,10 @@ from aiohttp import ClientSession
 from .headers import UA
 
 
-SongInfo = namedtuple('SongInfo', ['summary', 'id_', 'type_', 'from_'])
+SongInfo = namedtuple(
+    'SongInfo',
+    ['summary', 'id_', 'type_', 'from_'],
+)
 ua = UA()
 
 
@@ -17,13 +20,19 @@ class SourceModel:
     """Source类的模板."""
 
     def __init__(
-            self, loop: asyncio.base_events.BaseEventLoop,
-            *, path: str, browser: str = None) -> None:
+        self,
+        loop: asyncio.base_events.BaseEventLoop,
+        *,
+        path: str,
+        browser: str = None,
+        need_verify: bool = False,
+    ) -> None:
         self._loop = loop
         self._headers: dict = eval(f'ua.{browser or "chrome"}')
         self._cookies: dict = {}
         self._cp = Path(path).parent
         self._sess = asyncio.futures.Future(loop=loop)
+        self.need_verify = need_verify
 
         def init_sess() -> None:
             future: asyncio.tasks.Task = loop.create_task(self.__init_sess())
@@ -64,15 +73,13 @@ class SourceModel:
         """
         raise NotImplementedError
 
-    async def _login(self, username: str, password: str) -> None:
+    def check_login(self) -> dict:
         """登录.
 
-        :param username: 账号
-        :param password: 密码
-        :returns: None
+        返回允许的登录方式.
         """
 
-        pass
+        raise NotImplementedError
 
     def _cookie_str2dict(self, cookies: str) -> None:
         """将cookie字符串转换为字典.

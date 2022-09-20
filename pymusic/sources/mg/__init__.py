@@ -24,8 +24,12 @@ class Source(SourceModel):
     LOGIN_CALLBACK_URL = 'https://music.migu.cn/v3/user/login'
     PUBLICKEY_URL = 'https://passport.migu.cn/password/publickey'
 
-    def __init__(self, loop: asyncio.base_events.BaseEventLoop,
-                 *, browser: str = None) -> None:
+    def __init__(
+        self,
+        loop: asyncio.base_events.BaseEventLoop,
+        *,
+        browser: str = None,
+    ) -> None:
         super().__init__(loop, path=__file__, browser=browser)
         self.__parser = aiofile.AWrapper(fromstring)
         self.__app_info = self._loop.create_task(self.__init_migu_app())
@@ -147,7 +151,6 @@ class Source(SourceModel):
             'type': 2,
             "auditionsFlag": 11,
         }
-        __import__('pprint').pprint(data)
         data = json.dumps(data).replace(' ', '')
         data = encrypt(data, key).decode()
         params = {
@@ -164,7 +167,6 @@ class Source(SourceModel):
             allow_redirects=False,
         )
         res = await res.json(content_type=None)
-        print(res)
         # N000000 未登录
         # N000001 参数不合法
         status_code = res['returnCode']
@@ -177,7 +179,12 @@ class Source(SourceModel):
         if url:
             return 'https:' + url
 
-    async def _login(self, login_id: str, password: str) -> int:
+    async def __login_by_password(
+        self,
+        login_id: str,
+        password: str,
+        *args,
+    ) -> int:
         sess: ClientSession = await self._sess
         app_info = await self.__app_info
         publickey = await self.__publickey
@@ -203,7 +210,7 @@ class Source(SourceModel):
         res = await sess.post(self.LOGIN_URL, data=data)
         res = await res.json(content_type=None)
         if res['status'] != 2000:
-            raise RuntimeError('login error:' + res['message'])
+            return res['message']
         token = res['result']['token']
         params = {
             'token': token,
@@ -214,3 +221,8 @@ class Source(SourceModel):
         async with sess.get(self.LOGIN_CALLBACK_URL, params=params) as res:
             assert res.status == 200
         return 0
+
+    def check_login(self) -> tuple:
+        return {
+            'PWD': self.__login_by_password,
+        }

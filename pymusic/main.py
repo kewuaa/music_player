@@ -16,6 +16,7 @@ from PIL import Image
 from pymusic.sources.model import SourceModel
 from pymusic.sources.model import SongInfo
 from pymusic.ui.playerapp import PlayerApp
+from pymusic.ui.login_dialog import LoginDialog
 from pymusic.lib.plist import PlayList
 from pymusic.lib import asynctk
 from pymusic.lib import aiofile
@@ -24,9 +25,8 @@ from pymusic.lib import aiofile
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 current_path = Path(__file__).parent
-data_path = Path(os.environ['Appdata']) / '^3^' / 'data'
-if not data_path.exists():
-    data_path.mkdir(parents=True)
+data_path = Path(os.environ['Appdata']) / '^3^'
+download_path = data_path / 'audios'
 
 
 async def download(url: str, name: str) -> None:
@@ -37,7 +37,9 @@ async def download(url: str, name: str) -> None:
     :returns: None
     """
 
-    path = data_path / name
+    if not download_path.exists():
+        download_path.mkdir(parents=True)
+    path = download_path / name
     if path.exists():
         logger.info(f'{name} already exists')
         return
@@ -87,9 +89,73 @@ class App(PlayerApp):
         self.__play_list = PlayList(listbox=self.play_listbox)
         self.__download_list = PlayList(listbox=self.download_listbox)
         self.__current_list: PlayList = None
+        self.__login_requests = {}
 
     def __init_ui(self) -> None:
         """init ui."""
+
+        self.__login_dialog = LoginDialog(self.mainwindow)
+
+        style = tk.ttk.Style(self.mainwindow)
+        for style_name in style.theme_names():
+            self.style_submenu.add_command(
+                label=style_name,
+                command=partial(style.theme_use, style_name),
+            )
+        style.theme_use('winnative')
+        self.style_submenu.add('separator')
+
+        options = list(self.SOURCE_OPTIONS.keys())
+        self.sources_combobox.configure(
+            values=zip(options, self.SOURCE_OPTIONS.values()))
+        self.sources_combobox.set(options[2])
+
+        create(self.sources_combobox, '选择歌曲来源')
+        create(self.search_button, '点击进行搜索')
+        self.__tooltips['volume_button'] = create(self.volume_button, '静音')
+        self.__tooltips['volume_scale'] = create(
+            self.volume_scale, str(self._current_volume.get()))
+        create(self.previous_button, '上一曲')
+        self.__tooltips['play'] = create(self.play_button, '播放')
+        create(self.stop_button, '停止')
+        create(self.next_button, '下一曲')
+        create(self.download_button, '点击下载列表内的歌曲')
+        create(self.login_button, '点击登录')
+
+        self.search_entry.focus_set()
+
+    def __init_bind(self) -> None:
+        """ init binds """
+
+        # 添加ttkthemes的主题样式
+        def add_additional_styles():
+            def try_init():
+                try:
+                    import ttkthemes
+                except ImportError:
+                    self.mainwindow.after(
+                        0,
+                        tk.messagebox.showinfo,
+                        'info',
+                        'ttkthemes is needed\nuse pip to install it',
+                    )
+                else:
+                    self.style_submenu.delete('load more')
+                    self.mainwindow.after(100, init, ttkthemes)
+
+            def init(ttkthemes):
+                style = ttkthemes.ThemedStyle(self.mainwindow)
+                for style_name in ttkthemes.THEMES:
+                    self.style_submenu.add_command(
+                        label=style_name,
+                        command=partial(style.set_theme, style_name),
+                    )
+
+            self.__loop.call_soon_threadsafe(
+                self.__loop.run_in_executor,
+                None,
+                try_init,
+            )
 
         def toggle_fullscreen(event) -> None:
             """全屏切换."""
@@ -100,6 +166,53 @@ class App(PlayerApp):
 
         if_fullscreen = False
         self.mainwindow.bind('<F11>', toggle_fullscreen)
+
+        self.style_submenu.add_command(
+            label='load more',
+            command=add_additional_styles,
+        )
+
+        def accept_callback():
+            def login_callback(fut: asyncio.futures.Future) -> None:
+                res = fut.result()
+                if res != 0:
+                    dialog.log(res or '账号格式不正确')
+                else:
+                    self.__log('登录成功', time=3000)
+                    dialog.destroy()
+
+            dialog = self.__login_dialog
+            login_requests = self.__login_requests
+            for type_ in ['PWD', 'QR', 'SMS']:
+                if dialog.visible(dialog.__getattribute__(type_)):
+                    req = login_requests.get(type_)
+                    if req is not None:
+                        break
+                    else:
+                        tk.messagebox.showerror(
+                            'error',
+                            'something error occured',
+                        )
+            fut = req()
+            if fut is not None:
+                fut.add_done_callback(login_callback)
+                dialog.log('登录中......', color='blue')
+
+        self.__login_dialog.accept_bind(accept_callback)
+
+        def forward(event) -> None:
+            if self.__vlc is not None:
+                pos = self.__vlc.get_time()
+                self.__vlc.set_time(pos + 1000)
+
+        def backward(event) -> None:
+            if self.__vlc is not None:
+                pos = self.__vlc.get_time()
+                if pos > 1000:
+                    self.__vlc.set_time(pos - 1000)
+
+        self.mainwindow.bind('<Right>', forward)
+        self.mainwindow.bind('<Left>', backward)
 
         def right_button_event(event, list_: PlayList) -> None:
             index = list_.response(event)
@@ -144,41 +257,6 @@ class App(PlayerApp):
             '<Double-Button-1>',
             partial(double_click_event, list_=self.__download_list))
 
-        options = list(self.SOURCE_OPTIONS.keys())
-        self.sources_combobox.configure(
-            values=zip(options, self.SOURCE_OPTIONS.values()))
-        self.sources_combobox.set(options[2])
-
-        create(self.sources_combobox, '选择歌曲来源')
-        create(self.search_button, '点击进行搜索')
-        self.__tooltips['volume_button'] = create(self.volume_button, '静音')
-        self.__tooltips['volume_scale'] = create(
-            self.volume_scale, str(self._current_volume.get()))
-        create(self.previous_button, '上一曲')
-        self.__tooltips['play'] = create(self.play_button, '播放')
-        create(self.stop_button, '停止')
-        create(self.next_button, '下一曲')
-        create(self.download_button, '点击下载列表内的歌曲')
-        create(self.login_button, '点击登录')
-
-        self.search_entry.focus_set()
-
-    def __init_bind(self) -> None:
-        """ init binds """
-
-        def forward(event) -> None:
-            if self.__vlc is not None:
-                pos = self.__vlc.get_time()
-                self.__vlc.set_time(pos + 1000)
-
-        def backward(event) -> None:
-            if self.__vlc is not None:
-                pos = self.__vlc.get_time()
-                if pos > 1000:
-                    self.__vlc.set_time(pos - 1000)
-
-        self.mainwindow.bind('<Right>', forward)
-        self.mainwindow.bind('<Left>', backward)
         self.search_entry.bind('<Return>', lambda event: self._search())
 
     async def __init_icon(self) -> None:
@@ -313,26 +391,6 @@ class App(PlayerApp):
                     event,
                     callback,
                 )
-            # manager.event_attach(
-            #     vlc.EventType.MediaPlayerTimeChanged,
-            #     on_time_changed,
-            # )
-            # manager.event_attach(
-            #     vlc.EventType.MediaPlayerPlaying,
-            #     on_play,
-            # )
-            # manager.event_attach(
-            #     vlc.EventType.MediaPlayerPaused,
-            #     on_pause,
-            # )
-            # manager.event_attach(
-            #     vlc.EventType.MediaPlayerStopped,
-            #     on_stop,
-            # )
-            # manager.event_attach(
-            #     vlc.EventType.MediaPlayerLengthChanged,
-            #     on_length_changed,
-            # )
 
         future = self.__loop.create_future()
         future.add_done_callback(init_callback)
@@ -341,6 +399,18 @@ class App(PlayerApp):
             lambda future: self.__log('', time=1000))
         init_vlc()
         return future
+
+    def __get_source(self, source_name: str) -> SourceModel:
+        """获取source."""
+
+        if self.__source_dict.get(source_name) is None:
+            source: SourceModel = importlib.import_module(
+                'pymusic.sources.' + source_name).Source(self.__loop)
+            asynctk.add_done_before_exit(source.exit)
+            self.__source_dict[source_name] = source
+        else:
+            source: SourceModel = self.__source_dict[source_name]
+        return source
 
     def _search(self) -> None:
         """搜索."""
@@ -378,13 +448,7 @@ class App(PlayerApp):
         async def show_search_result() -> None:
             """获取搜索结果并展示."""
 
-            if self.__source_dict.get(source_name) is None:
-                source: SourceModel = importlib.import_module(
-                    'pymusic.sources.' + source_name).Source(self.__loop)
-                asynctk.add_done_before_exit(source.exit)
-                self.__source_dict[source_name] = source
-            else:
-                source: SourceModel = self.__source_dict[source_name]
+            source = self.__get_source(source_name)
             result = await source._get_info(name)
             for item in result:
                 add_result_to_frame(item)
@@ -426,7 +490,13 @@ class App(PlayerApp):
             self.__source_url = str(path)
         else:
             source: SourceModel = self.__source_dict[item.from_]
-            self.__source_url = await source._get_source(item.id_)
+            url = await source._get_source(item.id_)
+            if type(url) is str:
+                self.__source_url = url
+            elif url is None:
+                return
+            else:
+                return
         self.__vlc.set_mrl(self.__source_url)
         self.__vlc.play()
 
@@ -561,16 +631,51 @@ class App(PlayerApp):
     def _login(self) -> None:
         """登录."""
 
+        dialog = self.__login_dialog
         source_name = self._current_source.get()
-        if self.__source_dict.get(source_name) is None:
-            source: SourceModel = importlib.import_module(
-                'pymusic.sources.' + source_name).Source(self.__loop)
-            asynctk.add_done_before_exit(source.exit)
-            self.__source_dict[source_name] = source
-        else:
-            source: SourceModel = \
-                self.__source_dict[self._current_source.get()]
-        asynctk.create_task(source._login('18975257216', 'hzy..17313100485'))
+        source: SourceModel = self.__get_source(source_name)
+        try:
+            enabled_login_types = source.check_login()
+        except NotImplementedError:
+            tk.messagebox.showinfo(
+                'info',
+                'current source not support login yet',
+            )
+            return
+        for type_, login in enabled_login_types.items():
+            self.__login_requests[type_] = partial(
+                self.callbacks.get(type_),
+                self,
+                login,
+            )
+        dialog.show()
+        dialog.set_verify(source.need_verify)
+        dialog.update_tabs(enabled=enabled_login_types.keys())
+
+    def __pwd_callback(
+        self,
+        login,
+        *,
+        check_id: bool = True,
+    ) -> None:
+        dialog = self.__login_dialog
+        login_info = dialog.PWD_info(
+            check_id=check_id,
+        )
+        if type(login_info) is int:
+            msgs = [
+                '请输入账号',
+                '账号不能包含非数字字符',
+                '请输入密码',
+                '请输入验证码',
+            ]
+            dialog.log(msgs[login_info - 1])
+            return
+        return asynctk.create_task(login(*login_info))
+
+    callbacks = {
+        'PWD': __pwd_callback,
+    }
 
     def __log(self, msg: str, time: int = -1) -> None:
         """打印状态栏消息.

@@ -17,8 +17,12 @@ class Source(SourceModel):
     SEARCH_URL = 'https://complexsearch.kugou.com/v2/search/song'
     SOURCE_URL = 'https://wwwapi.kugou.com/yy/index.php'
 
-    def __init__(self, loop: asyncio.base_events.BaseEventLoop,
-                 *, browser: str = None) -> None:
+    def __init__(
+        self,
+        loop: asyncio.base_events.BaseEventLoop,
+        *,
+        browser: str = None,
+    ) -> None:
         super().__init__(loop, path=__file__, browser=browser)
         self.__compile = compile(r'{.*}')
         self.__appid = self._loop.create_task(self.__init__appid())

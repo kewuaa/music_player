@@ -386,7 +386,7 @@
     <property name="width">200</property>
     <child>
       <object class="ttk.Notebook" id="notebook">
-        <property name="height">140</property>
+        <property name="height">160</property>
         <property name="width">330</property>
         <layout manager="grid">
           <property name="column">0</property>
@@ -495,6 +495,18 @@
                     </layout>
                   </object>
                 </child>
+                <child>
+                  <object class="ttk.Checkbutton" id="visible_checkbutton">
+                    <property name="command" type="command" cbtype="simple">__toggle_pwd_visible</property>
+                    <property name="text" translatable="yes">密码可见</property>
+                    <property name="variable">int:__pwd_visible</property>
+                    <layout manager="grid">
+                      <property name="column">4</property>
+                      <property name="row">3</property>
+                      <property name="sticky">e</property>
+                    </layout>
+                  </object>
+                </child>
               </object>
             </child>
           </object>
@@ -569,6 +581,7 @@
                       <property name="columnspan">4</property>
                       <property name="ipadx">3</property>
                       <property name="ipady">3</property>
+                      <property name="pady">30</property>
                       <property name="row">0</property>
                       <property name="sticky">w</property>
                     </layout>

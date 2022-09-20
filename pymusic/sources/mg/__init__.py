@@ -179,7 +179,7 @@ class Source(SourceModel):
         if url:
             return 'https:' + url
 
-    async def __login_by_password(
+    async def __login_by_pwd(
         self,
         login_id: str,
         password: str,
@@ -224,5 +224,5 @@ class Source(SourceModel):
 
     def check_login(self) -> tuple:
         return {
-            'PWD': self.__login_by_password,
+            'PWD': self.__login_by_pwd,
         }

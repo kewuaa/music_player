@@ -482,8 +482,10 @@ class App(PlayerApp):
         :returns: None
         """
 
+        name = item.summary.split(' -> ')
+        name.pop()
         path = data_path / '.'.join([
-            item.summary.replace(' -> ', '-'),
+            '_'.join(name).replace(':', ''),
             item.type_,
         ])
         if path.exists():
@@ -496,6 +498,7 @@ class App(PlayerApp):
             elif url is None:
                 return
             else:
+                tk.messagebox.showinfo('info', '你还没有登录\n请先登录')
                 return
         self.__vlc.set_mrl(self.__source_url)
         self.__vlc.play()
@@ -605,7 +608,12 @@ class App(PlayerApp):
 
         source: SourceModel = self.__source_dict[item.from_]
         url = await source._get_source(item.id_)
-        name = '.'.join([item.summary.replace(' -> ', '-'), item.type_])
+        name = item.summary.split(' -> ')
+        name.pop()
+        name = '.'.join([
+            '_'.join(name).replace(':', ''),
+            item.type_,
+        ])
         await download(url, name)
         return item
 

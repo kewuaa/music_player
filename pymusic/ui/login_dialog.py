@@ -99,8 +99,6 @@ class LoginDialog:
     def __init__(self, master=None) -> None:
         master = master or tk.Tk()
         self.__master = master
-        self.__cancel_callback = self.close
-        self.__accept_callback = self.destroy
         self.__init_toplevel()
 
     def __init_toplevel(self) -> None:
@@ -113,8 +111,8 @@ class LoginDialog:
             "WM_DELETE_WINDOW",
             self.close,
         )
-        tl.accept_button.configure(command=self.__accept_callback)
-        tl.cancel_button.configure(command=self.__cancel_callback)
+        tl.accept_button.configure(command=self.close)
+        tl.cancel_button.configure(command=self.close)
         tl.notebook.enable_traversal()
 
     def __center_window(self):
@@ -141,9 +139,10 @@ class LoginDialog:
         """运行."""
 
         self.__center_window()
-        self.__tl.deiconify()
-        self.__tl.wait_visibility()
-        initial_focus = self.__tl.focus_lastfor()
+        tl = self.__tl
+        tl.deiconify()
+        tl.wait_visibility()
+        initial_focus = tl.focus_lastfor()
         if initial_focus:
             initial_focus.focus_set()
 
@@ -151,13 +150,11 @@ class LoginDialog:
         """取消事件."""
 
         self.__tl.cancel_button.configure(command=func)
-        self.__cancel_callback = func
 
     def accept_bind(self, func) -> None:
         """接受事件."""
 
         self.__tl.accept_button.configure(command=func)
-        self.__accept_callback = func
 
     def update_tabs(
         self,
@@ -188,6 +185,13 @@ class LoginDialog:
         self.__tl.verify_entry.configure(
             state='normal' if verify else 'disabled',
         )
+
+    def update_pwd(self, config: dict) -> None:
+        tl = self.__tl
+        tl.id_entry.delete(0, 'end')
+        tl.id_entry.insert(0, config.get('login_id', ''))
+        tl.password_entry.delete(0, 'end')
+        tl.password_entry.insert(0, config.get('password', ''))
 
     def PWD_info(
         self,
@@ -228,22 +232,20 @@ class LoginDialog:
     def show(self) -> None:
         """显示."""
 
-        if self.__tl is None:
-            self.__init_toplevel()
         self.__run()
 
     def close(self) -> None:
         """关闭."""
 
-        self.__tl.withdraw()
+        tl = self.__tl
+        tl.withdraw()
+        tl.message_label.configure(text='')
         self.__master.focus_set()
 
     def destroy(self) -> None:
         """销毁."""
 
         self.__tl.destroy()
-        self.__tl = None
-        self.__master.focus_set()
 
 
 if __name__ == "__main__":

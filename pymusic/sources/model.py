@@ -79,12 +79,25 @@ class SourceModel:
         """
         raise NotImplementedError
 
-    def check_settings(self):
+    async def check_settings(self):
         """检查是否存在配置文件."""
 
-        config_path = self.__config_path
+        config_path = self.__config_path / '.config'
         if config_path.exists():
-            return config_path
+            config = {}
+            async with aiofile.async_open(config_path, 'r', encoding='utf-8') as f:
+                for line in await f.readlines():
+                    k, v = line.split('=', 1)
+                    config[k] = v.strip()
+            return config
+
+    async def save_config(self, **kwargs):
+        config_path = self.__config_path / '.config'
+        config = await self.check_settings() or {}
+        config.update(kwargs)
+        async with aiofile.async_open(config_path, 'w', encoding='utf-8') as f:
+            for k, v in config.items():
+                await f.write(f'{k}={v}\n')
 
     def check_login(self) -> dict:
         """登录.

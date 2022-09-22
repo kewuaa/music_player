@@ -145,7 +145,7 @@ class App(PlayerApp):
                     dialog.log(res or '账号格式不正确')
                 else:
                     self.__log('登录成功', time=3000)
-                    dialog.destroy()
+                    dialog.close()
 
             dialog = self.__login_dialog
             login_requests = self.__login_requests
@@ -584,14 +584,20 @@ class App(PlayerApp):
                 self.callbacks.get(type_),
                 self,
                 login,
+                source.save_config,
             )
         dialog.show()
         dialog.set_verify(source.need_verify)
         dialog.update_tabs(enabled=enabled_login_types.keys())
+        asynctk.create_task(source.check_settings()).add_done_callback(
+            lambda fut: dialog.update_pwd(fut.result())
+            if fut.result() is not None else None
+        )
 
     def __pwd_callback(
         self,
         login,
+        save=None,
         *,
         check_id: bool = True,
     ) -> None:
@@ -601,7 +607,17 @@ class App(PlayerApp):
         )
         if login_info is None:
             return
-        return asynctk.create_task(login(*login_info))
+        task = asynctk.create_task(login(*login_info))
+        if save:
+            config = {
+                'login_id': login_info[0],
+                'password': login_info[1],
+            }
+            task.add_done_callback(
+                lambda fut: asynctk.create_task(save(**config))
+                if fut.result() == 0 else None
+            )
+        return task
 
     callbacks = {
         'PWD': __pwd_callback,
@@ -629,3 +645,4 @@ class App(PlayerApp):
             if self.__vlc.is_playing():
                 self.__vlc.stop()
             self.__vlc.release()
+        self.__login_dialog.destroy()

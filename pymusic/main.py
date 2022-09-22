@@ -2,68 +2,35 @@ from functools import partial
 from pathlib import Path
 from tkinter import filedialog
 import tkinter as tk
-import importlib
 import platform
 import asyncio
-import logging
 import os
 
 from pygubu.widgets.simpletooltip import create
-from aiohttp import request
 from PIL import ImageTk
 from PIL import Image
 
+from pymusic import sources
 from pymusic.sources.model import SourceModel
 from pymusic.sources.model import SongInfo
 from pymusic.ui.playerapp import PlayerApp
 from pymusic.ui.login_dialog import LoginDialog
 from pymusic.lib.plist import PlayList
 from pymusic.lib import asynctk
-from pymusic.lib import aiofile
 
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
 current_path = Path(__file__).parent
-data_path = Path(os.environ['Appdata']) / '^3^'
-download_path = data_path / 'audios'
-
-
-async def download(url: str, name: str) -> None:
-    """下载.
-
-    :param url: 资源链接
-    :param name: 资源名称
-    :returns: None
-    """
-
-    if not download_path.exists():
-        download_path.mkdir(parents=True)
-    path = download_path / name
-    if path.exists():
-        logger.info(f'{name} already exists')
-        return
-    async with request('GET', url) as res:
-        async with aiofile.async_open(path, 'wb') as f:
-            await f.write(await res.read())
 
 
 class App(PlayerApp):
     """App."""
 
-    SOURCE_OPTIONS = {
-        'kg': '酷狗',
-        'kw': '酷我',
-        'mg': '咪咕',
-        'qq': 'QQ',
-        'qqjt': '千千静听',
-        'wyy': '网易云',
-    }
-
     def __init__(self) -> None:
-        super().__init__()
+        root = asynctk.AsyncTk()
+        super().__init__(root)
         asynctk.add_done_before_exit(self.quit)
         self.mainwindow.after(300, self.__init_after)
+        sources.set_stdout(partial(tk.messagebox.showinfo, 'info'))
 
     def __init_after(self) -> None:
         """初始化."""
@@ -78,7 +45,6 @@ class App(PlayerApp):
 
         self.__vlc_path = './vlc-3.0.17.4'
         self.__loop: asyncio.base_events.BaseEventLoop = asynctk._callback_loop
-        self.__source_dict = {}
         self.__icons = {}
         self.__tooltips = {}
         self.__vlc = None
@@ -105,9 +71,9 @@ class App(PlayerApp):
         style.theme_use('winnative')
         self.style_submenu.add('separator')
 
-        options = list(self.SOURCE_OPTIONS.keys())
+        options = list(sources.SOURCE_OPTIONS.keys())
         self.sources_combobox.configure(
-            values=zip(options, self.SOURCE_OPTIONS.values()))
+            values=zip(options, sources.SOURCE_OPTIONS.values()))
         self.sources_combobox.set(options[2])
 
         create(self.sources_combobox, '选择歌曲来源')
@@ -225,7 +191,7 @@ class App(PlayerApp):
             menubar.add_command(
                 label='下载',
                 command=lambda: asynctk.create_task(
-                    self.__download_one(list_[index]),
+                    list_[index].download(),
                 ).add_done_callback(
                     lambda fut: list_.remove(fut.result())
                     if list_ is self.__download_list else None,
@@ -400,18 +366,6 @@ class App(PlayerApp):
         init_vlc()
         return future
 
-    def __get_source(self, source_name: str) -> SourceModel:
-        """获取source."""
-
-        if self.__source_dict.get(source_name) is None:
-            source: SourceModel = importlib.import_module(
-                'pymusic.sources.' + source_name).Source(self.__loop)
-            asynctk.add_done_before_exit(source.exit)
-            self.__source_dict[source_name] = source
-        else:
-            source: SourceModel = self.__source_dict[source_name]
-        return source
-
     def _search(self) -> None:
         """搜索."""
 
@@ -441,14 +395,14 @@ class App(PlayerApp):
             )
             menubar.add_command(
                 label='下载',
-                command=lambda: asynctk.create_task(self.__download_one(item)),
+                command=lambda: asynctk.create_task(item.download()),
             )
             menubar.post(event.x_root, event.y_root)
 
         async def show_search_result() -> None:
             """获取搜索结果并展示."""
 
-            source = self.__get_source(source_name)
+            source = sources.get(source_name)
             result = await source._get_info(name)
             for item in result:
                 add_result_to_frame(item)
@@ -482,23 +436,12 @@ class App(PlayerApp):
         :returns: None
         """
 
-        name = item.summary.split(' -> ')
-        name.pop()
-        path = data_path / '.'.join([
-            '_'.join(name).replace(':', ''),
-            item.type_,
-        ])
-        if path.exists():
+        path = item.check_download()
+        if path is not None:
             self.__source_url = str(path)
         else:
-            source: SourceModel = self.__source_dict[item.from_]
-            url = await source._get_source(item.id_)
-            if type(url) is str:
-                self.__source_url = url
-            elif url is None:
-                return
-            else:
-                tk.messagebox.showinfo('info', '你还没有登录\n请先登录')
+            url = await item.url()
+            if url is None:
                 return
         self.__vlc.set_mrl(self.__source_url)
         self.__vlc.play()
@@ -603,27 +546,13 @@ class App(PlayerApp):
                 self.__vlc.release()
                 self.__vlc = None
 
-    async def __download_one(self, item: SongInfo) -> SongInfo:
-        """下载单曲."""
-
-        source: SourceModel = self.__source_dict[item.from_]
-        url = await source._get_source(item.id_)
-        name = item.summary.split(' -> ')
-        name.pop()
-        name = '.'.join([
-            '_'.join(name).replace(':', ''),
-            item.type_,
-        ])
-        await download(url, name)
-        return item
-
     def _download(self) -> None:
         """下载."""
 
         async def download_start():
             tasks = []
             for item in list_:
-                task = self.__loop.create_task(self.__download_one(item))
+                task = self.__loop.create_task(item.download())
                 task.add_done_callback(lambda fut: list_.remove(fut.result()))
                 tasks.append(task)
             for task in tasks:
@@ -641,7 +570,7 @@ class App(PlayerApp):
 
         dialog = self.__login_dialog
         source_name = self._current_source.get()
-        source: SourceModel = self.__get_source(source_name)
+        source: SourceModel = sources.get(source_name)
         try:
             enabled_login_types = source.check_login()
         except NotImplementedError:
@@ -670,14 +599,7 @@ class App(PlayerApp):
         login_info = dialog.PWD_info(
             check_id=check_id,
         )
-        if type(login_info) is int:
-            msgs = [
-                '请输入账号',
-                '账号不能包含非数字字符',
-                '请输入密码',
-                '请输入验证码',
-            ]
-            dialog.log(msgs[login_info - 1])
+        if login_info is None:
             return
         return asynctk.create_task(login(*login_info))
 

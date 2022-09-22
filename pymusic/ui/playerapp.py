@@ -1,4 +1,3 @@
-from pymusic.lib.asynctk import AsyncTk
 import tkinter as tk
 import tkinter.ttk as ttk
 from pygubu.widgets.combobox import Combobox
@@ -6,9 +5,9 @@ from pygubu.widgets.scrolledframe import ScrolledFrame
 
 
 class PlayerApp:
-    def __init__(self, master=None):
+    def __init__(self, master):
         # build ui
-        self.toplevel = AsyncTk()
+        self.toplevel = master
         self.panedwindow2 = ttk.Panedwindow(self.toplevel, orient="horizontal")
         self.notebook1 = ttk.Notebook(self.panedwindow2)
         self.frame2 = ttk.Frame(self.notebook1)

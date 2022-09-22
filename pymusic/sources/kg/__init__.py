@@ -73,14 +73,12 @@ class Source(SourceModel):
             summary = [song_name, singer_name]
             if album_name:
                 summary.append(album_name)
-            summary = ' -> '.join(summary)
             source_id = album_id, album_audio_id, file_hash
-            ext_name = data['ExtName']
+            # ext_name = data['ExtName']
             return SongInfo(
                 summary=summary,
-                id_=source_id,
-                type_=ext_name,
-                from_='kg',
+                _id=source_id,
+                _from=self,
             )
 
         return [parse(item) for item in data]

@@ -107,6 +107,7 @@ class LoginDialog:
         """初始化toplevel."""
 
         tl = self.__tl = LoginToplevel(self.__master)
+        tl.transient(self.__master)
         tl.withdraw()
         tl.protocol(
             "WM_DELETE_WINDOW",
@@ -139,10 +140,9 @@ class LoginDialog:
     def __run(self) -> None:
         """运行."""
 
-        self.__tl.transient(self.__master)
+        self.__center_window()
         self.__tl.deiconify()
         self.__tl.wait_visibility()
-        self.__center_window()
         initial_focus = self.__tl.focus_lastfor()
         if initial_focus:
             initial_focus.focus_set()
@@ -199,15 +199,19 @@ class LoginDialog:
         password = tl.password_entry.get()
         verify_code = tl.verify_entry.get().strip()
         if not login_id:
-            return 1
+            self.log('请输入账号')
+            return
         if check_id:
             s = set(login_id)
             if len(s | set('0123456789')) > 10:
-                return 2
+                self.log('账号不能包含非数字字符')
+                return
         if not password:
-            return 3
+            self.log('请输入密码')
+            return
         if need_verify and not verify_code:
-            return 4
+            self.log('请输入验证码')
+            return
         return login_id, password, verify_code
 
     def MSM_info(self) -> tuple:
@@ -239,6 +243,7 @@ class LoginDialog:
 
         self.__tl.destroy()
         self.__tl = None
+        self.__master.focus_set()
 
 
 if __name__ == "__main__":

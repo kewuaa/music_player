@@ -51,14 +51,12 @@ class Source(SourceModel):
             song_name = data['name']
             singer_name = data['ar'][0]['name']
             album_name = data['al']['name']
-            id_ = data['id']
+            source_id = data['id']
             summary = [song_name, singer_name, album_name]
-            summary = ' -> '.join(summary)
             return SongInfo(
                 summary=summary,
-                id_=id_,
-                type_='m4a',
-                from_='wyy',
+                _id=source_id,
+                _from=self,
             )
 
         return [parse(item) for item in data]

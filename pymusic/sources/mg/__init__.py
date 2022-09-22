@@ -109,10 +109,9 @@ class Source(SourceModel):
                 summary.append(info_dict['album'])
             source_id = info_dict['linkUrl'].split('/')[-1]
             return SongInfo(
-                summary=' -> '.join(summary),
-                id_=source_id,
-                type_='mp3',
-                from_='mg',
+                summary=summary,
+                _id=source_id,
+                _from=self,
             )
 
         return [parse(tree) for tree in data]

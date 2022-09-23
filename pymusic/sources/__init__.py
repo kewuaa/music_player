@@ -11,16 +11,20 @@ SOURCE_OPTIONS = {
     'qqjt': '千千静听',
     'wyy': '网易云',
 }
+sources = {}
 
 
 def get(name: str) -> SourceModel:
-    module = __import__(
-        name,
-        globals(),
-        locals(),
-        [],
-        level=1,
-    )
-    source = module.Source(asynctk._callback_loop)
-    asynctk.add_done_before_exit(source.exit)
+    source = sources.get(name)
+    if source is None:
+        module = __import__(
+            name,
+            globals(),
+            locals(),
+            [],
+            level=1,
+        )
+        sources[name] = source = module.Source(asynctk._callback_loop)
+        asynctk.add_done_before_exit(source.exit)
+    print(source)
     return source

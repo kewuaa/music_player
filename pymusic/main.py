@@ -443,6 +443,7 @@ class App(PlayerApp):
             url = await item.url()
             if url is None:
                 return
+            self.__source_url = url
         self.__vlc.set_mrl(self.__source_url)
         self.__vlc.play()
 

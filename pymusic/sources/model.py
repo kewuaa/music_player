@@ -157,10 +157,10 @@ class SongInfo:
 
     async def url(self):
         if not hasattr(self, '_url'):
-            self._url = await self.__from._get_source(self.__id)
-        url = self._url
+            url = await self.__from._get_source(self.__id)
         if type(url) is str:
-            return self._url
+            self._url = url
+            return url
         if url is None:
             msg = 'vip或无版权歌曲'
         elif url == -1:

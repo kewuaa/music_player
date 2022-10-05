@@ -26,5 +26,4 @@ def get(name: str) -> SourceModel:
         )
         sources[name] = source = module.Source(asynctk._callback_loop)
         asynctk.add_done_before_exit(source.exit)
-    print(source)
     return source

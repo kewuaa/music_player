@@ -45,9 +45,8 @@ class Source(SourceModel):
         url = 'https://music.migu.cn/v3'
         res = await sess.get(url)
         source_page = await res.text()
-        tree = await self.__parser(source_page)
-        app_info = tree.xpath('//script[@type="text/javascript"]/text()')[0]
-        app_info = compile(r'{([\s\S]+?)}').search(app_info).group(1)
+        app_info = compile(r'var MUSIC_CONFIG.*?{([\S\s]+?)}').\
+            search(source_page).group(1)
         return {
             k.strip(): v.strip().strip("'").strip('"')
             for k, v in [

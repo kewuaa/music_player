@@ -3,17 +3,6 @@ from .model import set_stdout
 from .model import SourceModel
 
 
-SOURCE_OPTIONS = {
-    'kg': '酷狗',
-    'kw': '酷我',
-    'mg': '咪咕',
-    'qq': 'QQ',
-    'qqjt': '千千静听',
-    'wyy': '网易云',
-}
-sources = {}
-
-
 def get(name: str) -> SourceModel:
     source = sources.get(name)
     if source is None:
@@ -27,3 +16,15 @@ def get(name: str) -> SourceModel:
         sources[name] = source = module.Source(asynctk._callback_loop)
         asynctk.add_done_before_exit(source.exit)
     return source
+
+
+SOURCE_OPTIONS = {
+    'kg': '酷狗',
+    # 'kw': '酷我',
+    'mg': '咪咕',
+    # 'qq': 'QQ',
+    # 'qqjt': '千千静听',
+    'wyy': '网易云',
+}
+sources = {}
+

@@ -117,7 +117,7 @@ class Source(SourceModel):
 
     async def _get_info(self, name: str) -> SongInfo:
         sess: ClientSession = await self._sess
-        sess.headers['referer'] = 'https://music.migu.cn/v3'
+        sess.headers['Referer'] = 'https://music.migu.cn/v3'
         time_stamp = self._get_time_stamp()
         app_info = await self.__app_info
         params = {
@@ -141,7 +141,7 @@ class Source(SourceModel):
 
     async def _get_source(self, source_id: str) -> str:
         sess: ClientSession = await self._sess
-        sess.headers['referer'] = 'https://music.migu.cn/v3/music/player/audio'
+        sess.headers['Referer'] = 'https://music.migu.cn/v3/music/player/audio'
         key = \
             '4ea5c508a6566e76240543f8feb06fd457777be39549c4016436afda65d2330e'
         data = {
@@ -184,6 +184,7 @@ class Source(SourceModel):
         *args,
     ) -> int:
         sess: ClientSession = await self._sess
+        print(sess.headers)
         app_info = await self.__app_info
         publickey = await self.__publickey
         n, e = publickey['modulus'], publickey['publicExponent']
@@ -211,12 +212,16 @@ class Source(SourceModel):
             return res['message']
         token = res['result']['token']
         params = {
-            'token': token,
             'callbackURL': 'https://music.migu.cn/v3',
             'relayState': '',
+            'token': token,
             'logintype': 'PWD',
         }
+        sess.headers['Referer'] = 'https://passport.migu.cn/'
+        for cookie in sess.cookie_jar:
+            print(cookie)
         async with sess.get(self.LOGIN_CALLBACK_URL, params=params) as res:
+            print(await res.text())
             assert res.status == 200
         return 0
 

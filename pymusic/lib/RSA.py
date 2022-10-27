@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Author: kewuaa
-# @Date:   2022-02-13 09:33:52
-# @Last Modified by:   None
-# @Last Modified time: 2022-02-13 16:15:24
 import binascii
 
 import rsa

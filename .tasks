@@ -1,19 +1,9 @@
 # vim: set fenc=utf-8 ft=dosini:
 # see: https://github.com/skywind3000/asynctasks.vim/wiki/Task-Config
 
-# define a new task named "file-build"
 [file-run]
 
-# shell command, use quotation for filenames containing spaces
-# check ":AsyncTaskMacro" to see available macros
-command:python=<root>/.venv/Scripts/python "$(VIM_FILEPATH)"
+command:python=python <root>/main.py
 
-# working directory, can change to $(VIM_ROOT) for project root
-# cwd=<root>
-cwd=$(VIM_FILEDIR)
-
-[run-test]
-# command=<root>/.venv/Scripts/python "<root>/tests/$(-test-file).py"
-command=<root>/.venv/Scripts/python "<root>/tests/test.py"
 cwd=<root>
 

@@ -1,0 +1,4 @@
+import pymusic
+
+
+pymusic.run()

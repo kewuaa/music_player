@@ -601,7 +601,7 @@ class App(PlayerApp):
         save=None,
         *,
         check_id: bool = True,
-    ) -> None:
+    ) -> asyncio.futures.Future:
         dialog = self.__login_dialog
         login_info = dialog.PWD_info(
             check_id=check_id,

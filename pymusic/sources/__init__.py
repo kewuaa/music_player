@@ -20,7 +20,7 @@ def get(name: str) -> SourceModel:
 
 SOURCE_OPTIONS = {
     'kg': '酷狗',
-    # 'kw': '酷我',
+    'kw': '酷我',
     'mg': '咪咕',
     # 'qq': 'QQ',
     # 'qqjt': '千千静听',

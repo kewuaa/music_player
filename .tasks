@@ -3,7 +3,7 @@
 
 [file-run]
 
-command:python=python <root>/main.py
+command:python=$(+default_pyenv) <root>/main.py
 
 cwd=<root>
 

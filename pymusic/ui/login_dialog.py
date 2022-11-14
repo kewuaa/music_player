@@ -1,5 +1,10 @@
+from functools import partial
+from enum import IntEnum
 import tkinter as tk
 import tkinter.ttk as ttk
+
+from ..sources.model import LoginConfig
+from ..lib import asynctk
 
 
 class LoginToplevel(tk.Toplevel):
@@ -88,17 +93,20 @@ class LoginToplevel(tk.Toplevel):
         self.password_entry.configure(show='' if state else '★')
 
 
-class LoginDialog:
-    """登录对话框."""
-
+class LoginType(IntEnum):
     PWD = 0
     QR = 1
     SMS = 2
-    TABS = 'PWD', 'QR', 'SMS'
+
+
+class LoginDialog:
+    """登录对话框."""
 
     def __init__(self, master=None) -> None:
         master = master or tk.Tk()
         self.__master = master
+        self.__parsers = [self.PWD_info, NotImplemented, NotImplemented]
+        self.__callbacks = [None] * 3
         self.__init_toplevel()
 
     def __init_toplevel(self) -> None:
@@ -111,8 +119,8 @@ class LoginDialog:
             "WM_DELETE_WINDOW",
             self.close,
         )
-        tl.accept_button.configure(command=self.close)
         tl.cancel_button.configure(command=self.close)
+        tl.accept_button.configure(command=self.__accept_callback)
         tl.notebook.enable_traversal()
 
     def __center_window(self):
@@ -146,45 +154,57 @@ class LoginDialog:
         if initial_focus:
             initial_focus.focus_set()
 
-    def cancel_bind(self, func) -> None:
-        """取消事件."""
-
-        self.__tl.cancel_button.configure(command=func)
-
-    def accept_bind(self, func) -> None:
+    def __accept_callback(self) -> None:
         """接受事件."""
 
-        self.__tl.accept_button.configure(command=func)
+        def login_callback(fut):
+            res = fut.result()
+            if res != 0:
+                self.log(res or '账号格式不正确')
+            else:
+                self.close()
 
-    def update_tabs(
+        for tab in LoginType:
+            tab_id = tab.value
+            if self.visible(tab_id):
+                callback, parser = self.__callbacks[tab_id]
+                info = parser()
+                if info is not None:
+                    self.log('登录中......', color='blue')
+                    asynctk.create_task(callback(*info)).\
+                        add_done_callback(login_callback)
+                break
+
+    def reset(
         self,
-        enabled: tuple = None,
-        disabled: tuple = None,
+        config: LoginConfig,
     ) -> None:
-        """禁用部分tab."""
+        """重置."""
 
-        notebook = self.__tl.notebook
-        if enabled:
-            for tab in self.TABS:
-                state = 'normal' if tab in enabled else 'hidden'
-                tab = self.__getattribute__(tab)
-                notebook.tab(tab, state=state)
-        elif disabled:
-            for tab in self.TABS:
-                state = 'hidden' if tab in disabled else 'normal'
-                tab = self.__getattribute__(tab)
-                notebook.tab(tab, state=state)
+        tl = self.__tl
+        notebook = tl.notebook
+        tl.verify_entry.configure(
+            state='normal' if config.need_verify else 'disabled',
+        )
+        callbacks = (
+            config.PWD_callback,
+            config.QR_callback,
+            config.SMS_callback,
+        )
+        for callback, parser, tab in zip(callbacks, self.__parsers, LoginType):
+            tab_id = tab.value
+            state = 'hidden'
+            if callback is not None:
+                assert callable(callback)
+                state = 'normal'
+                self.__callbacks[tab_id] = (callback, partial(parser, config))
+            notebook.tab(tab_id, state=state)
 
-    def visible(self, tab: int) -> bool:
+    def visible(self, tab_id: int) -> bool:
         notebook = self.__tl.notebook
-        tab_name = notebook.tabs()[tab]
+        tab_name = notebook.tabs()[tab_id]
         frame: tk.Frame = self.__master.nametowidget(tab_name)
         return frame.winfo_ismapped()
-
-    def set_verify(self, verify: bool) -> None:
-        self.__tl.verify_entry.configure(
-            state='normal' if verify else 'disabled',
-        )
 
     def update_pwd(self, config: dict) -> None:
         tl = self.__tl
@@ -195,17 +215,17 @@ class LoginDialog:
 
     def PWD_info(
         self,
-        check_id: bool = False,
+        config: LoginConfig,
     ) -> tuple:
         tl = self.__tl
-        need_verify = str(tl.verify_entry['state']) == 'normal'
+        need_verify = config.need_verify
         login_id = tl.id_entry.get().strip()
         password = tl.password_entry.get()
         verify_code = tl.verify_entry.get().strip()
         if not login_id:
             self.log('请输入账号')
             return
-        if check_id:
+        if config.check_id:
             s = set(login_id)
             if len(s | set('0123456789')) > 10:
                 self.log('账号不能包含非数字字符')
@@ -217,9 +237,6 @@ class LoginDialog:
             self.log('请输入验证码')
             return
         return login_id, password, verify_code
-
-    def MSM_info(self) -> tuple:
-        raise NotImplementedError
 
     def log(self, msg, color: str = None) -> None:
         """打印消息."""

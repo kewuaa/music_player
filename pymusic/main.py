@@ -55,7 +55,6 @@ class App(PlayerApp):
         self.__play_list = PlayList(listbox=self.play_listbox)
         self.__download_list = PlayList(listbox=self.download_listbox)
         self.__current_list: PlayList = None
-        self.__login_requests = {}
 
     def __init_ui(self) -> None:
         """init ui."""
@@ -137,34 +136,6 @@ class App(PlayerApp):
             label='load more',
             command=add_additional_styles,
         )
-
-        def accept_callback():
-            def login_callback(fut: asyncio.futures.Future) -> None:
-                res = fut.result()
-                if res != 0:
-                    dialog.log(res or '账号格式不正确')
-                else:
-                    self.__log('登录成功', time=3000)
-                    dialog.close()
-
-            dialog = self.__login_dialog
-            login_requests = self.__login_requests
-            for type_ in ['PWD', 'QR', 'SMS']:
-                if dialog.visible(dialog.__getattribute__(type_)):
-                    req = login_requests.get(type_)
-                    if req is not None:
-                        break
-                    else:
-                        tk.messagebox.showerror(
-                            'error',
-                            'something error occured',
-                        )
-            fut = req()
-            if fut is not None:
-                fut.add_done_callback(login_callback)
-                dialog.log('登录中......', color='blue')
-
-        self.__login_dialog.accept_bind(accept_callback)
 
         def forward(event) -> None:
             if self.__vlc is not None:
@@ -572,57 +543,19 @@ class App(PlayerApp):
         dialog = self.__login_dialog
         source_name = self._current_source.get()
         source: SourceModel = sources.get(source_name)
-        try:
-            enabled_login_types = source.check_login()
-        except NotImplementedError:
+        login_config = source.check_login()
+        if not login_config.enabled:
             tk.messagebox.showinfo(
                 'info',
                 'current source not support login yet',
             )
             return
-        for type_, login in enabled_login_types.items():
-            self.__login_requests[type_] = partial(
-                self.callbacks.get(type_),
-                self,
-                login,
-                source.save_config,
-            )
+        dialog.reset(login_config)
         dialog.show()
-        dialog.set_verify(source.need_verify)
-        dialog.update_tabs(enabled=enabled_login_types.keys())
         asynctk.create_task(source.check_settings()).add_done_callback(
             lambda fut: dialog.update_pwd(fut.result())
             if fut.result() is not None else None
         )
-
-    def __pwd_callback(
-        self,
-        login,
-        save=None,
-        *,
-        check_id: bool = True,
-    ) -> asyncio.futures.Future:
-        dialog = self.__login_dialog
-        login_info = dialog.PWD_info(
-            check_id=check_id,
-        )
-        if login_info is None:
-            return
-        task = asynctk.create_task(login(*login_info))
-        if save:
-            config = {
-                'login_id': login_info[0],
-                'password': login_info[1],
-            }
-            task.add_done_callback(
-                lambda fut: asynctk.create_task(save(**config))
-                if fut.result() == 0 else None
-            )
-        return task
-
-    callbacks = {
-        'PWD': __pwd_callback,
-    }
 
     def __log(self, msg: str, time: int = -1) -> None:
         """打印状态栏消息.

@@ -3,11 +3,11 @@ import base64
 import asyncio
 
 from Crypto.Cipher import AES
-from aiohttp import ClientSession
 from hashlib import md5
 
 from ..model import SongInfo
 from ..model import SourceModel
+from ..model import LoginConfig
 
 
 class Source(SourceModel):
@@ -15,7 +15,8 @@ class Source(SourceModel):
 
     SEARCH_URL = 'https://music.163.com/weapi/cloudsearch/get/web'
     SOURCE_URL = 'https://music.163.com/weapi/song/enhance/player/url/v1'
-    LOGIN_URL = 'https://music.163.com/weapi/w/login/cellphone'
+    LOGIN_URL_PHONE = 'https://music.163.com/weapi/login/cellphone'
+    LOGIN_URL_EMAIL = 'http://music.163.com/weapi/login'
 
     def __init__(
         self,
@@ -35,7 +36,10 @@ class Source(SourceModel):
         result = aes.encrypt(to_encrypt)
         return base64.b64encode(result).decode()
 
-    encSecKey = '21e8dcd7b013c2e56af244ad4e55484d5840b108df255fbeccf88e8187362476af2cc881a61884aea955937337fe3bdfe896a62c27606da8aea2f3c93b9bb6c6e0c17b85da6e3a766d580286967975db7f0f38ef88d582b39f92058deff794b705702e70be6f26b93c206e55e55e6a51874469fd11cdff86df742c3b9dd89abe'
+    encSecKey = '21e8dcd7b013c2e56af244ad4e55484d5840b108df255fbeccf88e818736'\
+        '2476af2cc881a61884aea955937337fe3bdfe896a62c27606da8aea2f3c93b9bb6c6'\
+        'e0c17b85da6e3a766d580286967975db7f0f38ef88d582b39f92058deff794b70570'\
+        '2e70be6f26b93c206e55e55e6a51874469fd11cdff86df742c3b9dd89abe'
     i = 'jkUEeutwbd2HLFNL'
     g = '0CoJUm6Qyw8W8jud'
 
@@ -81,10 +85,10 @@ class Source(SourceModel):
             'params': encrypt_str,
             'encSecKey': self.encSecKey,
         }
-        sess: ClientSession = await self._sess
-        res = await sess.post(self.SEARCH_URL, params=params, data=data)
-        res = await res.json(content_type=None)
-        data = res.get('result')
+        sess = await self._session()
+        resp = await sess.post(self.SEARCH_URL, params=params, data=data)
+        resp_dict = await resp.json(content_type=None)
+        data = resp_dict.get('result')
         if data is None:
             raise RuntimeError('unknow error while getting source info')
         data = data['songs']
@@ -106,49 +110,61 @@ class Source(SourceModel):
             'params': encrypt_str,
             'encSecKey': self.encSecKey,
         }
-        sess: ClientSession = await self._sess
-        res = await sess.post(self.SOURCE_URL, params=params, data=data)
-        res = await res.json(content_type=None)
-        url = res['data'][0]['url']
-        print(url)
+        sess = await self._session()
+        resp = await sess.post(self.SOURCE_URL, params=params, data=data)
+        resp = await resp.json(content_type=None)
+        url = resp['data'][0]['url']
         if url is not None:
             return url
-
-    def __get_checktoken(self) -> str:
-        """获取checkToken."""
-
-        pass
 
     async def __login_by_pwd(
         self,
         login_id,
         password,
+        *args,
     ) -> int:
         """账号密码登录."""
 
+        password = md5(password.encode()).hexdigest()
+        if '@' in login_id:
+            data = {
+                'username': login_id,
+                'password': password,
+                'rememberLogin': 'true',
+                'clientToken': '1_jVUMqWEPke0/1/Vu56xCmJpo5vP1grjn_SOVVDzOc78w'
+                '8OKLVZ2JH7IfkjSXqgfmh',
+            }
+            url = self.LOGIN_URL_EMAIL
+        else:
+            data = {
+                'phone': login_id,
+                'password': password,
+                'rememberLogin': 'true',
+            }
+            url = self.LOGIN_URL_PHONE
         params = {
             'csrf_token': '',
         }
-        to_encrypt = {
-            'phone': login_id,
-            'rememberLogin': 'true',
-            'password': md5(password.encode()).hexdigest(),
-            'checkToken': await self.__get_checktoken(),
-            'csrf_token': '',
-        }
-        to_encrypt = json.dumps(to_encrypt)
+        to_encrypt = json.dumps(data)
         encrypt_str = self.__encrypt(to_encrypt)
         data = {
             'params': encrypt_str,
             'encSecKey': self.encSecKey,
         }
-        sess: ClientSession = await self._sess
-        res = await sess.post(self.LOGIN_URL, params=params, data=data)
-        res = await res.json(content_type=None)
-        if res['code'] != 200:
-            raise RuntimeError(res.get('msg', '登录失败'))
+        sess = await self._session()
+        resp = await sess.post(url, params=params, data=data)
+        resp_dict = await resp.json(content_type=None)
+        resp_code = resp_dict['code']
+        print(resp_dict)
+        print(sess.headers)
+        for cookie in sess.cookie_jar:
+            print(cookie)
+        if resp_code != 200:
+            raise RuntimeError(resp_dict.get('msg', '登录失败'))
+        return 1
 
-    # def check_login(self) -> dict:
-    #     return {
-    #         'PWD': self.__login_by_pwd,
-    #     }
+    def check_login(self) -> LoginConfig:
+        return LoginConfig(
+            check_id=False,
+            PWD_callback=self.__login_by_pwd,
+        )

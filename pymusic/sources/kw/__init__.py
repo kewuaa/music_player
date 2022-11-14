@@ -4,8 +4,6 @@ from secrets import randbelow
 from http.cookies import SimpleCookie
 import asyncio
 
-from aiohttp import ClientSession
-
 from ..model import SongInfo
 from ..model import SourceModel
 
@@ -102,7 +100,7 @@ class Source(SourceModel):
         self._cookies['kw_token'] = 'LPZZ7D4HRJO'
 
     async def _get_info(self, name: str) -> list:
-        sess: ClientSession = await self._sess
+        sess = await self._session()
         cookies: SimpleCookie = sess.cookie_jar.filter_cookies(self.__domain)
         csrf = cookies.get('kw_token').value
         sess.headers['csrf'] = csrf
@@ -112,20 +110,20 @@ class Source(SourceModel):
             'httpsStatus': 1,
             'req-id': self.__get_reqid(),
         }
-        res = await sess.get(self.SEARCH_URL, params=params)
-        res_dict = await res.json(content_type=None)
+        resp = await sess.get(self.SEARCH_URL, params=params)
+        res_dict = await resp.json(content_type=None)
         data = res_dict['data']['list']
         return self.__parse_data(data)
 
     async def _get_source(self, source_id) -> str:
-        sess: ClientSession = await self._sess
+        sess = await self._session()
         params = {
             'mid': source_id,
             'httpsStatus': 1,
             'type': 'music',
             'req-id': self.__get_reqid(),
         }
-        res = await sess.get(self.SOURCE_URL, params=params)
-        res_dict = await res.json(content_type=None)
+        resp = await sess.get(self.SOURCE_URL, params=params)
+        res_dict = await resp.json(content_type=None)
         data = res_dict['data']
         return data['url']

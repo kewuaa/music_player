@@ -4,8 +4,6 @@ from re import compile
 import asyncio
 import json
 
-from aiohttp import ClientSession
-
 from ..model import SourceModel
 from ..model import SongInfo
 
@@ -52,11 +50,11 @@ class Source(SourceModel):
         })
 
     async def __init__appid(self) -> str:
-        sess: ClientSession = await self._sess
+        sess = await self._session()
         pattenr = compile(r'appid=(\d*)')
         url = 'https://www.kugou.com/'
-        res = await sess.get(url)
-        source_page = await res.text()
+        resp = await sess.get(url)
+        source_page = await resp.text()
         appid = pattenr.search(source_page).group(1)
         return appid
 
@@ -113,9 +111,9 @@ class Source(SourceModel):
         ])
         signature = md5(key_str.encode()).hexdigest()
         params['signature'] = signature
-        sess: ClientSession = await self._sess
-        res = await sess.get(self.SEARCH_URL, params=params)
-        res_text = await res.text()
+        sess = await self._session()
+        resp = await sess.get(self.SEARCH_URL, params=params)
+        res_text = await resp.text()
         res_text = self.__compile.findall(res_text)[0]
         res_dict = json.loads(res_text)
         if res_dict.get('error_msg', 1):
@@ -142,9 +140,9 @@ class Source(SourceModel):
             params['album_id'] = album_id
         if album_audio_id:
             params['album_audio_id'] = album_audio_id
-        sess: ClientSession = await self._sess
-        res = await sess.get(self.SOURCE_URL, params=params)
-        res_str = await res.text()
+        sess = await self._session()
+        resp = await sess.get(self.SOURCE_URL, params=params)
+        res_str = await resp.text()
         res_str = self.__compile.findall(res_str)[0]
         res_dict = json.loads(res_str)
         if res_dict.get('err_code', 1):

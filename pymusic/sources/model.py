@@ -1,4 +1,9 @@
+from typing import Callable
+from typing import Sequence
+from typing import Dict
+from typing import List
 from http.cookies import SimpleCookie
+from dataclasses import dataclass
 from pathlib import Path
 import asyncio
 import time
@@ -15,9 +20,23 @@ __ua = UA()
 __stdout = None
 
 
-def set_stdout(stdout) -> None:
+def set_stdout(stdout: Callable[[str], None]) -> None:
     global __stdout
     __stdout = stdout
+
+
+@dataclass(repr=False, order=False, eq=False)
+class LoginConfig:
+    need_verify: bool = False
+    check_id: bool = True
+    PWD_callback: Callable[[str, str], int] | None = None
+    QR_callback: Callable[..., int] | None = None
+    SMS_callback: Callable[..., int] | None = None
+
+    def __post_init__(self) -> None:
+        self.enabled = True\
+            if any([self.PWD_callback, self.QR_callback, self.SMS_callback])\
+            else False
 
 
 class SourceModel:
@@ -28,21 +47,19 @@ class SourceModel:
         loop: asyncio.base_events.BaseEventLoop,
         *,
         path: str,
-        browser: str = None,
-        need_verify: bool = False,
+        browser: str | None = None,
     ) -> None:
         self._loop = loop
-        self._headers: dict = eval(f'__ua.{browser or "chrome"}')
-        self._cookies: dict = {}
+        self._headers: Dict = eval(f'__ua.{browser or "chrome"}')
+        self._cookies = {}
         self._cp = Path(path).parent
         self.__config_path = settings.config_path / self._cp.name
         self.__config_path.mkdir(parents=True, exist_ok=True)
-        self._sess = asyncio.futures.Future(loop=loop)
-        self.need_verify = need_verify
+        self.__sess = asyncio.futures.Future(loop=loop)
 
         def init_sess() -> None:
             future: asyncio.tasks.Task = loop.create_task(self.__init_sess())
-            asyncio.futures._chain_future(future, self._sess)
+            asyncio.futures._chain_future(future, self.__sess)
 
         loop.call_soon_threadsafe(init_sess)
 
@@ -58,12 +75,15 @@ class SourceModel:
             kwargs['cookies'] = self._cookies
         return ClientSession(**kwargs)
 
+    async def _session(self) -> ClientSession:
+        return await self.__sess
+
     async def _init_cookies(self) -> None:
         """初始化cookie."""
 
         pass
 
-    async def _get_info(self, name: str) -> list:
+    async def _get_info(self, name: str) -> List:
         """检索获取信息.
 
         :param name: 检索项
@@ -71,7 +91,7 @@ class SourceModel:
         """
         raise NotImplementedError
 
-    async def _get_source(self, source_id: str) -> None:
+    async def _get_source(self, source_id: str) -> str:
         """获取source.
 
         :param source_id: source的id
@@ -79,19 +99,19 @@ class SourceModel:
         """
         raise NotImplementedError
 
-    async def check_settings(self):
+    async def check_settings(self) -> Dict:
         """检查是否存在配置文件."""
 
         config_path = self.__config_path / '.config'
+        config = {}
         if config_path.exists():
-            config = {}
-            async with aiofile.async_open(config_path, 'r', encoding='utf-8') as f:
+            async with aiofile.async_open(config_path, 'r') as f:
                 for line in await f.readlines():
                     k, v = line.split('=', 1)
                     config[k] = v.strip()
-            return config
+        return config
 
-    async def save_config(self, **kwargs):
+    async def save_config(self, **kwargs) -> None:
         config_path = self.__config_path / '.config'
         config = await self.check_settings() or {}
         config.update(kwargs)
@@ -99,7 +119,7 @@ class SourceModel:
             for k, v in config.items():
                 await f.write(f'{k}={v}\n')
 
-    def check_login(self) -> dict:
+    def check_login(self) -> LoginConfig:
         """登录.
 
         返回允许的登录方式.
@@ -107,7 +127,7 @@ class SourceModel:
 
         raise NotImplementedError
 
-    def _cookie_str2dict(self, cookies: str) -> None:
+    def _cookie_str2dict(self, cookies: str) -> Dict:
         """将cookie字符串转换为字典.
 
         :param cookies: cookie字符串
@@ -131,7 +151,7 @@ class SourceModel:
     async def exit(self) -> None:
         """退出."""
 
-        sess: ClientSession = await self._sess
+        sess: ClientSession = await self.__sess
         if not sess.closed:
             await sess.close()
 
@@ -140,8 +160,8 @@ class SongInfo:
     def __init__(
         self,
         *,
-        summary: list,
-        _id: list or str,
+        summary: List[str],
+        _id: Sequence | str,
         _from: SourceModel,
     ) -> None:
         self.__summary = summary
@@ -155,7 +175,7 @@ class SongInfo:
     def summary(self) -> str:
         return ' -> '.join(self.__summary)
 
-    async def url(self):
+    async def url(self) -> str:
         if not hasattr(self, '_url'):
             url = await self.__from._get_source(self.__id)
         if type(url) is str:
@@ -168,7 +188,7 @@ class SongInfo:
         stdout = globals().get('__stdout') or print
         stdout(msg)
 
-    async def download(self) -> int:
+    async def download(self) -> None:
         if not hasattr(self, '_path'):
             url: str = await self.url()
             if url is None:
@@ -180,9 +200,8 @@ class SongInfo:
                 data = await res.read()
                 async with aiofile.async_open(path, 'wb') as f:
                     await f.write(data)
-        return 0
 
-    def check_download(self):
+    def check_download(self) -> Path | None:
         if not hasattr(self, '_path'):
             files = list(self.__base_path.glob(self.__name + '.*'))
             if not files:

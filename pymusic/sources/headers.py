@@ -11,7 +11,7 @@ class UA:
         self._uas = json.load(f)['browsers']
         f.close()
 
-    def __getattribute__(self, name: str) -> None:
+    def __getattribute__(self, name: str) -> dict:
         uas = super().__getattribute__('_uas')
         ua = uas.get(name)
         if ua is not None:

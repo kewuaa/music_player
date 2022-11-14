@@ -13,8 +13,8 @@ from PIL import Image
 from pymusic import sources
 from pymusic.sources.model import SourceModel
 from pymusic.sources.model import SongInfo
-from pymusic.ui.playerapp import PlayerApp
-from pymusic.ui.login_dialog import LoginDialog
+from pymusic.ui import PlayerApp
+from pymusic.ui.login import LoginDialog
 from pymusic.lib.plist import PlayList
 from pymusic.lib import asynctk
 

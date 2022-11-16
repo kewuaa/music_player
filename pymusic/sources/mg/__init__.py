@@ -181,8 +181,8 @@ class Source(SourceModel):
         self,
         login_id: str,
         password: str,
-        *args,
-    ) -> int:
+        *_,
+    ) -> None:
         sess = await self._session()
         app_info = await self.__app_info
         publickey = await self.__publickey
@@ -211,7 +211,7 @@ class Source(SourceModel):
         resp = await sess.post(self.LOGIN_URL, data=data)
         resp = await resp.json(content_type=None)
         if resp['status'] != 2000:
-            return resp['message']
+            raise RuntimeError(resp['message'])
         token = resp['result']['token']
         params = {
             'callbackURL': 'https://music.migu.cn/v3',
@@ -220,12 +220,9 @@ class Source(SourceModel):
             'logintype': 'PWD',
         }
         sess.headers['Referer'] = 'https://passport.migu.cn/'
-        for cookie in sess.cookie_jar:
-            print(cookie)
         async with sess.get(self.LOGIN_CALLBACK_URL, params=params) as resp:
-            print(await resp.text())
-            assert resp.status == 200
-        return 0
+            assert resp.status == 200, '请求错误'
+        await self.save_config(password=password, login_id=login_id)
 
     def check_login(self) -> LoginConfig:
         return LoginConfig(

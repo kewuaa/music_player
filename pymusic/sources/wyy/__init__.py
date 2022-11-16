@@ -122,7 +122,7 @@ class Source(SourceModel):
         login_id,
         password,
         *args,
-    ) -> int:
+    ) -> None:
         """账号密码登录."""
 
         password = md5(password.encode()).hexdigest()
@@ -160,8 +160,10 @@ class Source(SourceModel):
         for cookie in sess.cookie_jar:
             print(cookie)
         if resp_code != 200:
-            raise RuntimeError(resp_dict.get('msg', '登录失败'))
-        return 1
+            raise RuntimeError(resp_dict.get('message', '登录失败'))
+
+    async def __login_by_qr(self, *_) -> None:
+        pass
 
     def check_login(self) -> LoginConfig:
         return LoginConfig(

@@ -29,9 +29,9 @@ def set_stdout(stdout: Callable[[str], None]) -> None:
 class LoginConfig:
     need_verify: bool = False
     check_id: bool = True
-    PWD_callback: Callable[[str, str], int] | None = None
-    QR_callback: Callable[..., int] | None = None
-    SMS_callback: Callable[..., int] | None = None
+    PWD_callback: Callable[[str, str], None] | None = None
+    QR_callback: Callable[..., None] | None = None
+    SMS_callback: Callable[..., None] | None = None
 
     def __post_init__(self) -> None:
         self.enabled = True\
@@ -113,7 +113,7 @@ class SourceModel:
 
     async def save_config(self, **kwargs) -> None:
         config_path = self.__config_path / '.config'
-        config = await self.check_settings() or {}
+        config = await self.check_settings()
         config.update(kwargs)
         async with aiofile.async_open(config_path, 'w', encoding='utf-8') as f:
             for k, v in config.items():

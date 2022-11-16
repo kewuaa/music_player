@@ -1,5 +1,6 @@
 from enum import IntEnum
 from functools import partial
+from asyncio.futures import Future
 import tkinter as tk
 
 from pymusic.sources.model import LoginConfig
@@ -19,7 +20,6 @@ class LoginDialog:
     def __init__(self, master=None) -> None:
         master = master or tk.Tk()
         self.__master = master
-        self.__parsers = [self.PWD_info, NotImplemented, NotImplemented]
         self.__callbacks = [None] * 3
         self.__init_toplevel()
 
@@ -71,22 +71,21 @@ class LoginDialog:
     def __accept_callback(self) -> None:
         """接受事件."""
 
-        def login_callback(fut):
-            res = fut.result()
-            if res != 0:
-                self.log(res or '账号格式不正确')
+        def login_callback(fut: Future):
+            exception = fut.exception()
+            if exception is not None:
+                self.log(str(exception) or 'unknown error')
             else:
                 self.close()
 
         for tab in LoginType:
             tab_id = tab.value
             if self.visible(tab_id):
-                callback, parser = self.__callbacks[tab_id]
-                info = parser()
-                if info is not None:
-                    self.log('登录中......', color='blue')
-                    asynctk.create_task(callback(*info)).\
-                        add_done_callback(login_callback)
+                callback = self.__callbacks[tab_id]
+                assert callable(callback)
+                task: Future = callback()
+                if task is not None:
+                    task.add_done_callback(login_callback)
                 break
 
     def reset(
@@ -105,13 +104,19 @@ class LoginDialog:
             config.QR_callback,
             config.SMS_callback,
         )
-        for callback, parser, tab in zip(callbacks, self.__parsers, LoginType):
-            tab_id = tab.value
+        for callback, login_type in zip(callbacks, LoginType):
+            tab_id = login_type.value
             state = 'hidden'
             if callback is not None:
-                assert callable(callback)
                 state = 'normal'
-                self.__callbacks[tab_id] = (callback, partial(parser, config))
+                if login_type is LoginType.PWD:
+                    self.__callbacks[tab_id] = partial(
+                        self.__PWD_callback,
+                        config,
+                        callback,
+                    )
+                elif login_type is LoginType.QR:
+                    pass
             notebook.tab(tab_id, state=state)
 
     def visible(self, tab_id: int) -> bool:
@@ -127,10 +132,7 @@ class LoginDialog:
         tl.password_entry.delete(0, 'end')
         tl.password_entry.insert(0, config.get('password', ''))
 
-    def PWD_info(
-        self,
-        config: LoginConfig,
-    ) -> tuple:
+    def __PWD_callback(self, config: LoginConfig, callback) -> Future | None:
         tl = self.__tl
         need_verify = config.need_verify
         login_id = tl.id_entry.get().strip()
@@ -150,7 +152,7 @@ class LoginDialog:
         if need_verify and not verify_code:
             self.log('请输入验证码')
             return
-        return login_id, password, verify_code
+        return asynctk.create_task(callback(login_id, password, verify_code))
 
     def log(self, msg, color: str = None) -> None:
         """打印消息."""

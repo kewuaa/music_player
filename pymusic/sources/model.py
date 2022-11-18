@@ -30,7 +30,7 @@ class LoginConfig:
     need_verify: bool = False
     check_id: bool = True
     PWD_callback: Callable[[str, str], None] | None = None
-    QR_callback: Callable[..., None] | None = None
+    QR_callback: Callable[[Callable], str] | None = None
     SMS_callback: Callable[..., None] | None = None
 
     def __post_init__(self) -> None:

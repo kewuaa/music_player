@@ -1,9 +1,10 @@
+from http.cookies import SimpleCookie
+from hashlib import md5
 import json
 import base64
 import asyncio
 
 from Crypto.Cipher import AES
-from hashlib import md5
 
 from ..model import SongInfo
 from ..model import SourceModel
@@ -15,8 +16,6 @@ class Source(SourceModel):
 
     SEARCH_URL = 'https://music.163.com/weapi/cloudsearch/get/web'
     SOURCE_URL = 'https://music.163.com/weapi/song/enhance/player/url/v1'
-    LOGIN_URL_PHONE = 'https://music.163.com/weapi/login/cellphone'
-    LOGIN_URL_EMAIL = 'http://music.163.com/weapi/login'
 
     def __init__(
         self,
@@ -43,10 +42,14 @@ class Source(SourceModel):
     i = 'jkUEeutwbd2HLFNL'
     g = '0CoJUm6Qyw8W8jud'
 
-    def __encrypt(self, to_encrypt: str) -> str:
+    def __encrypt(self, data: dict) -> dict:
+        to_encrypt = json.dumps(data)
         encrypt_str = self.__AES(to_encrypt, self.g)
         encrypt_str = self.__AES(encrypt_str, self.i)
-        return encrypt_str
+        return {
+            'params': encrypt_str,
+            'encSecKey': self.encSecKey,
+        }
 
     def __parse_data(self, data: dict) -> list:
         """解析data."""
@@ -66,10 +69,11 @@ class Source(SourceModel):
         return [parse(item) for item in data]
 
     async def _get_info(self, name: str) -> SongInfo:
+        sess = await self._session()
         params = {
             'csrf_token': '',
         }
-        to_encrypt = {
+        data = {
             "hlpretag": "<span class=\"s-fc7\">",
             "hlposttag": "</span>",
             "s": name,
@@ -79,13 +83,7 @@ class Source(SourceModel):
             "limit": "30",
             "csrf_token": "",
         }
-        to_encrypt = json.dumps(to_encrypt)
-        encrypt_str = self.__encrypt(to_encrypt)
-        data = {
-            'params': encrypt_str,
-            'encSecKey': self.encSecKey,
-        }
-        sess = await self._session()
+        data = self.__encrypt(data)
         resp = await sess.post(self.SEARCH_URL, params=params, data=data)
         resp_dict = await resp.json(content_type=None)
         data = resp_dict.get('result')
@@ -95,22 +93,17 @@ class Source(SourceModel):
         return self.__parse_data(data)
 
     async def _get_source(self, source_id) -> str:
+        sess = await self._session()
         params = {
             'csrf_token': '',
         }
-        to_encrypt = {
+        data = {
             'ids': f'[{source_id}]',
             'level': 'standard',
             'encodeType': 'aac',
             'csrf_token': '',
         }
-        to_encrypt = json.dumps(to_encrypt)
-        encrypt_str = self.__encrypt(to_encrypt)
-        data = {
-            'params': encrypt_str,
-            'encSecKey': self.encSecKey,
-        }
-        sess = await self._session()
+        data = self.__encrypt(data)
         resp = await sess.post(self.SOURCE_URL, params=params, data=data)
         resp = await resp.json(content_type=None)
         url = resp['data'][0]['url']
@@ -125,6 +118,7 @@ class Source(SourceModel):
     ) -> None:
         """账号密码登录."""
 
+        sess = await self._session()
         password = md5(password.encode()).hexdigest()
         if '@' in login_id:
             data = {
@@ -134,39 +128,104 @@ class Source(SourceModel):
                 'clientToken': '1_jVUMqWEPke0/1/Vu56xCmJpo5vP1grjn_SOVVDzOc78w'
                 '8OKLVZ2JH7IfkjSXqgfmh',
             }
-            url = self.LOGIN_URL_EMAIL
+            url = 'http://music.163.com/weapi/login'
         else:
             data = {
                 'phone': login_id,
                 'password': password,
                 'rememberLogin': 'true',
             }
-            url = self.LOGIN_URL_PHONE
+            url = 'https://music.163.com/weapi/login/cellphone'
         params = {
             'csrf_token': '',
         }
-        to_encrypt = json.dumps(data)
-        encrypt_str = self.__encrypt(to_encrypt)
-        data = {
-            'params': encrypt_str,
-            'encSecKey': self.encSecKey,
-        }
-        sess = await self._session()
+        data = self.__encrypt(data)
         resp = await sess.post(url, params=params, data=data)
         resp_dict = await resp.json(content_type=None)
         resp_code = resp_dict['code']
-        print(resp_dict)
-        print(sess.headers)
-        for cookie in sess.cookie_jar:
-            print(cookie)
         if resp_code != 200:
             raise RuntimeError(resp_dict.get('message', '登录失败'))
 
-    async def __login_by_qr(self, *_) -> None:
-        pass
+    async def __login_by_qr(self, callback, *_) -> None:
+        def cancel():
+            task.remove_done_callback(callback)
+            task.cancel()
+        check_login = self.__check_qr_login_status
+        try:
+            unikey = await self.__fetch_unikey()
+            return 'http://music.163.com/login?codekey=' + unikey
+        except Exception as e:
+            check_login = None
+            raise e
+        finally:
+            if check_login is not None:
+                task = self._loop.create_task(check_login(unikey))
+                task.add_done_callback(callback)
+                current_task = asyncio.tasks.current_task(loop=self._loop)
+                current_task._special_callback = cancel
+
+    async def __fetch_unikey(self) -> str:
+        sess = await self._session()
+        unikey_url = 'https://music.163.com/weapi/login/qrcode/unikey'
+        data = {
+            'type': 1,
+            'noCheckToken': 'true',
+            'csrf_token': '',
+        }
+        data = self.__encrypt(data)
+        resp = await sess.post(
+            unikey_url,
+            params={'csrf_token': ''},
+            data=data,
+        )
+        resp_dict = await resp.json(content_type=None)
+        if resp_dict['code'] != 200:
+            raise RuntimeError('get unikey error')
+        unikey = resp_dict['unikey']
+        return unikey
+
+    async def __check_qr_login_status(self, unikey: str) -> None:
+        sess = await self._session()
+        check_url = 'https://music.163.com/weapi/login/qrcode/client/login'
+        account_url = 'https://music.163.com/weapi/w/nuser/account/get'
+        data = {
+            'csrf_token': '',
+            'key': unikey,
+            'type': 1,
+        }
+        data = self.__encrypt(data)
+        while 1:
+            await asyncio.sleep(0.5)
+            resp = await sess.post(
+                check_url,
+                params={'csrf_token': ''},
+                data=data,
+            )
+            resp_dict = await resp.json(content_type=None)
+            code = resp_dict['code']
+            if code == 803:
+                break
+            elif code in [801, 802]:
+                continue
+            else:
+                raise RuntimeError('unknown error')
+        cookies: SimpleCookie = \
+            sess.cookie_jar.filter_cookies('https://music.163.com/')
+        csrf_token = cookies.get('__csrf').value
+        data = self.__encrypt({'csrf_token': csrf_token})
+        resp = await sess.post(
+            account_url,
+            params={'csrf_token': csrf_token},
+            data=data,
+        )
+        print(await resp.json(content_type=None))
+        print('successfully login')
+        for cookie in sess.cookie_jar:
+            print(cookie)
 
     def check_login(self) -> LoginConfig:
         return LoginConfig(
             check_id=False,
             PWD_callback=self.__login_by_pwd,
+            QR_callback=self.__login_by_qr,
         )

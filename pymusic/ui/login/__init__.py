@@ -3,6 +3,10 @@ from functools import partial
 from asyncio.futures import Future
 import tkinter as tk
 
+from PIL import ImageTk
+from PIL import Image
+import qrcode
+
 from pymusic.sources.model import LoginConfig
 from pymusic.lib import asynctk
 from .dialog import LoginToplevel
@@ -68,15 +72,16 @@ class LoginDialog:
         if initial_focus:
             initial_focus.focus_set()
 
+    def __login_callback(self, fut: Future):
+        exception = fut.exception()
+        if exception is not None:
+            print(exception)
+            self.log(str(exception) or 'unknown error')
+        else:
+            self.close()
+
     def __accept_callback(self) -> None:
         """接受事件."""
-
-        def login_callback(fut: Future):
-            exception = fut.exception()
-            if exception is not None:
-                self.log(str(exception) or 'unknown error')
-            else:
-                self.close()
 
         for tab in LoginType:
             tab_id = tab.value
@@ -85,8 +90,57 @@ class LoginDialog:
                 assert callable(callback)
                 task: Future = callback()
                 if task is not None:
-                    task.add_done_callback(login_callback)
+                    task.add_done_callback(self.__login_callback)
                 break
+
+    def __toggle_bind(self, fetch_img) -> None:
+        """切换tab触发事件."""
+
+        def create_task() -> None:
+            nonlocal task
+            task = loop.create_task(fetch_img(self.__login_callback))
+            task.add_done_callback(self.__update_qrcode)
+
+        def func(event: tk.Event):
+            try:
+                tab_id = notebook.index('current')
+            except tk.TclError:
+                return
+            nonlocal task
+            if tab_id == LoginType.QR:
+                loop.call_soon_threadsafe(create_task)
+            elif task is not None:
+                asynctk.call_soon(task._special_callback)
+                task = None
+
+        task: Future = None
+        loop = asynctk._callback_loop
+        notebook = self.__tl.notebook
+        notebook.unbind_all('<<NotebookTabChanged>>')
+        notebook.bind('<<NotebookTabChanged>>', func)
+
+    def __update_qrcode(self, fut: Future) -> None:
+        exception = fut.exception()
+        if exception is not None:
+            self.log(str(exception) or 'unknow error')
+            return
+        scan_url = fut.result()
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(scan_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='black', back_color='white')
+        qr_label = self.__tl.qr_code_label
+        size = int(qr_label.winfo_width() / 1.5), \
+            int(qr_label.winfo_height() / 1.5)
+        img = img.resize(size, Image.ANTIALIAS)
+        img = ImageTk.PhotoImage(img)
+        qr_label.configure(image=img)
+        qr_label.img = img
 
     def reset(
         self,
@@ -116,7 +170,7 @@ class LoginDialog:
                         callback,
                     )
                 elif login_type is LoginType.QR:
-                    pass
+                    self.__toggle_bind(callback)
             notebook.tab(tab_id, state=state)
 
     def visible(self, tab_id: int) -> bool:

@@ -75,7 +75,6 @@ class LoginDialog:
     def __login_callback(self, fut: Future):
         exception = fut.exception()
         if exception is not None:
-            print(exception)
             self.log(str(exception) or 'unknown error')
         else:
             self.close()
@@ -108,10 +107,13 @@ class LoginDialog:
                 return
             nonlocal task
             if tab_id == LoginType.QR:
+                self.__tl.accept_button.grid_remove()
                 loop.call_soon_threadsafe(create_task)
-            elif task is not None:
-                asynctk.call_soon(task._special_callback)
-                task = None
+            else:
+                self.__tl.accept_button.grid()
+                if task is not None:
+                    asynctk.call_soon(task._special_callback)
+                    task = None
 
         task: Future = None
         loop = asynctk._callback_loop

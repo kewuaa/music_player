@@ -6,22 +6,15 @@ import json
 class UA:
     """随机请求头"""
 
-    def __init__(self) -> None:
-        f = open(Path(__file__).parent / './headers.json', 'rb')
-        self._uas = json.load(f)['browsers']
-        f.close()
+    with open(Path(__file__).parent / './headers.json', 'rb') as f:
+        RANDOM_UAS = json.load(f)['browsers']
 
-    def __getattribute__(self, name: str) -> dict:
-        uas = super().__getattribute__('_uas')
-        ua = uas.get(name)
-        if ua is not None:
-            return {'user-agent': choice(ua)}
-        else:
-            raise AttributeError(name)
+    @classmethod
+    def get(cls, browser: str) -> dict:
+        return {
+            'user-agent': choice(cls.RANDOM_UAS.get(browser))
+        }
 
 
 if __name__ == '__main__':
-    ua = UA()
-    print(ua.chrome)
-    print(ua.firefox)
-    print(eval('ua.firefox'))
+    print(UA.get('firefox'))

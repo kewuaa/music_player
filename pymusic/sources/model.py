@@ -1,5 +1,6 @@
 from typing import Callable
 from typing import Sequence
+from typing import Tuple
 from typing import Dict
 from typing import List
 from http.cookies import SimpleCookie
@@ -16,7 +17,6 @@ from pymusic import settings
 from .headers import UA
 
 
-__ua = UA()
 __stdout = None
 
 
@@ -31,10 +31,12 @@ class LoginConfig:
     check_id: bool = True
     PWD_callback: Callable[[str, str], None] | None = None
     QR_callback: Callable[[Callable], str] | None = None
-    SMS_callback: Callable[..., None] | None = None
+    SMS_callback: Callable[
+        [], Tuple[Callable[[str], None], Callable[[str, str], None]]
+    ] | None = None
 
     def __post_init__(self) -> None:
-        self.enabled = True\
+        self.enabled = True \
             if any([self.PWD_callback, self.QR_callback, self.SMS_callback])\
             else False
 
@@ -50,7 +52,7 @@ class SourceModel:
         browser: str | None = None,
     ) -> None:
         self._loop = loop
-        self._headers: Dict = eval(f'__ua.{browser or "chrome"}')
+        self._headers: Dict = UA.get(browser or 'chrome')
         self._cookies = {}
         self._cp = Path(path).parent
         self.__config_path = settings.config_path / self._cp.name

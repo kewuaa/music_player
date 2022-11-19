@@ -147,6 +147,8 @@ class Source(SourceModel):
             raise RuntimeError(resp_dict.get('message', '登录失败'))
 
     async def __login_by_qr(self, callback, *_) -> None:
+        """二维码扫描登录."""
+
         def cancel():
             task.remove_done_callback(callback)
             task.cancel()
@@ -165,6 +167,8 @@ class Source(SourceModel):
                 current_task._special_callback = cancel
 
     async def __fetch_unikey(self) -> str:
+        """获取二维码图片所需unikey."""
+
         sess = await self._session()
         unikey_url = 'https://music.163.com/weapi/login/qrcode/unikey'
         data = {
@@ -185,6 +189,8 @@ class Source(SourceModel):
         return unikey
 
     async def __check_qr_login_status(self, unikey: str) -> None:
+        """检测二维码是否扫描成功."""
+
         sess = await self._session()
         check_url = 'https://music.163.com/weapi/login/qrcode/client/login'
         account_url = 'https://music.163.com/weapi/w/nuser/account/get'
@@ -218,10 +224,33 @@ class Source(SourceModel):
             params={'csrf_token': csrf_token},
             data=data,
         )
-        print(await resp.json(content_type=None))
-        print('successfully login')
-        for cookie in sess.cookie_jar:
-            print(cookie)
+        # resp_dict = await resp.json(content_type=None)
+
+    async def __login_by_sms(self) -> None:
+        """通过短信验证码登录."""
+
+        async def send_sms(self, cellphone: str, ctcode: int = 86) -> None:
+            """发送验证码."""
+
+            sess = await self._session()
+            sms_url = 'http://music.163.com/weapi/sms/captcha/sent'
+            data = {
+                'cellphone': cellphone, 'ctcode': ctcode,
+            }
+            data = self.__encrypt(data)
+            resp = await sess.post(
+                sms_url,
+                data=data,
+                params={'csrf_token': ''},
+            )
+            resp_dict = await resp.json(content_type=None)
+            if resp_dict['code'] != 200:
+                raise RuntimeError('send sms error')
+
+        async def login(cellphone: str, verify_code: str) -> None:
+            pass
+
+        return send_sms, login
 
     def check_login(self) -> LoginConfig:
         return LoginConfig(

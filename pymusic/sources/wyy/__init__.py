@@ -217,7 +217,8 @@ class Source(SourceModel):
                 raise RuntimeError('unknown error')
         cookies: SimpleCookie = \
             sess.cookie_jar.filter_cookies('https://music.163.com/')
-        csrf_token = cookies.get('__csrf').value
+        csrf_token = cookies.get('__csrf')
+        csrf_token = '' if csrf_token is None else csrf_token.value
         data = self.__encrypt({'csrf_token': csrf_token})
         resp = await sess.post(
             account_url,
@@ -226,16 +227,19 @@ class Source(SourceModel):
         )
         # resp_dict = await resp.json(content_type=None)
 
-    async def __login_by_sms(self) -> None:
+    def __login_by_sms(self, ctcode: int = 86) -> None:
         """通过短信验证码登录."""
 
-        async def send_sms(self, cellphone: str, ctcode: int = 86) -> None:
+        async def send_sms(cellphone: str) -> None:
             """发送验证码."""
 
+            nonlocal last_cellphone
+            last_cellphone = cellphone
             sess = await self._session()
             sms_url = 'http://music.163.com/weapi/sms/captcha/sent'
             data = {
-                'cellphone': cellphone, 'ctcode': ctcode,
+                'cellphone': cellphone,
+                'ctcode': ctcode,
             }
             data = self.__encrypt(data)
             resp = await sess.post(
@@ -248,8 +252,31 @@ class Source(SourceModel):
                 raise RuntimeError('send sms error')
 
         async def login(cellphone: str, verify_code: str) -> None:
-            pass
+            if cellphone != last_cellphone:
+                raise RuntimeError('the cellphone is not the same as the last')
+            sess = await self._session()
+            verify_url = 'http://music.163.com/weapi/sms/captcha/verify'
+            cookies = sess.cookie_jar.filter_cookies('https://music.163.com/')
+            csrf_token = cookies.get('__csrf')
+            csrf_token = '' if csrf_token is None else csrf_token.value
+            data = {
+                'cellphone': cellphone,
+                'captcha': verify_code,
+                'ctcode': ctcode,
+                'csrf_token': csrf_token,
+            }
+            data = self.__encrypt(data)
+            resp = await sess.post(
+                verify_url,
+                data=data,
+                params={'csrf_token': csrf_token},
+            )
+            resp_dict = await resp.json(content_type=None)
+            resp_code = resp_dict['code']
+            if resp_code != 200:
+                raise RuntimeError(resp_dict.get('msg', resp_dict['message']))
 
+        last_cellphone = ''
         return send_sms, login
 
     def check_login(self) -> LoginConfig:
@@ -257,4 +284,5 @@ class Source(SourceModel):
             check_id=False,
             PWD_callback=self.__login_by_pwd,
             QR_callback=self.__login_by_qr,
+            SMS_callback=self.__login_by_sms,
         )

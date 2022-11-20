@@ -1,6 +1,7 @@
 from enum import IntEnum
 from functools import partial
 from asyncio.futures import Future
+from asyncio import iscoroutinefunction
 import tkinter as tk
 
 from PIL import ImageTk
@@ -24,6 +25,7 @@ class LoginDialog:
     def __init__(self, master=None) -> None:
         master = master or tk.Tk()
         self.__master = master
+        self.__done_befor_close = None
         self.__callbacks = [None] * 3
         self.__init_toplevel()
 
@@ -116,6 +118,8 @@ class LoginDialog:
                     task = None
 
         task: Future = None
+        self.__done_befor_close = lambda: \
+            task._special_callback() if task is not None else None
         loop = asynctk._callback_loop
         notebook = self.__tl.notebook
         notebook.unbind_all('<<NotebookTabChanged>>')
@@ -143,6 +147,26 @@ class LoginDialog:
         img = ImageTk.PhotoImage(img)
         qr_label.configure(image=img)
         qr_label.img = img
+
+    def __bind_sms_func(self, func) -> None:
+        def command():
+            cellphone = self.__tl.phone_entry.get().strip()
+            if not cellphone:
+                self.log('请输入电话号码')
+                return
+            else:
+                s = set(cellphone)
+                if len(cellphone) != 11 or len(s | set('0123456789')) > 10:
+                    self.log('请输入正确的电话号码')
+                    return
+            asynctk.create_task(
+                func(cellphone),
+            ).add_done_callback(lambda fut: self.log(
+                fut.exception() or '验证码已发送',
+                color='blue' if fut.exception() is None else 'red',
+            ))
+        assert iscoroutinefunction(func)
+        self.__tl.sms_button.configure(command=command)
 
     def reset(
         self,
@@ -173,6 +197,14 @@ class LoginDialog:
                     )
                 elif login_type is LoginType.QR:
                     self.__toggle_bind(callback)
+                elif login_type is LoginType.SMS:
+                    send_sms, login = callback()
+                    self.__bind_sms_func(send_sms)
+                    self.__callbacks[tab_id] = partial(
+                        self.__SMS_callback,
+                        config,
+                        login,
+                    )
             notebook.tab(tab_id, state=state)
 
     def visible(self, tab_id: int) -> bool:
@@ -210,6 +242,23 @@ class LoginDialog:
             return
         return asynctk.create_task(callback(login_id, password, verify_code))
 
+    def __SMS_callback(self, config: LoginConfig, callback) -> Future | None:
+        tl = self.__tl
+        cellphone = tl.phone_entry.get().strip()
+        verify_code = tl.sms_verify_entry.get().strip()
+        if not cellphone:
+            self.log('请输入电话号码')
+            return
+        else:
+            s = set(cellphone)
+            if len(cellphone) != 11 or len(s | set('0123456789')) > 10:
+                self.log('请输入正确的电话号码')
+                return
+        if not verify_code:
+            self.log('请输入短信验证码')
+            return
+        return asynctk.create_task(callback(cellphone, verify_code))
+
     def log(self, msg, color: str = None) -> None:
         """打印消息."""
 
@@ -226,6 +275,8 @@ class LoginDialog:
     def close(self) -> None:
         """关闭."""
 
+        if self.__done_befor_close is not None:
+            self.__done_befor_close()
         tl = self.__tl
         tl.withdraw()
         tl.message_label.configure(text='')
@@ -234,4 +285,6 @@ class LoginDialog:
     def destroy(self) -> None:
         """销毁."""
 
+        if self.__done_befor_close is not None:
+            self.__done_befor_close()
         self.__tl.destroy()

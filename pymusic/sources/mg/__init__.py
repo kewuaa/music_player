@@ -1,11 +1,14 @@
 from urllib.parse import quote
 from random import choice
 from hashlib import sha1
+from re import compile
+from base64 import b64decode
+from io import BytesIO
 import asyncio
 import json
 
 from lxml.html import fromstring
-from re import compile
+from PIL import Image
 
 from pymusic.lib import aiofile
 from pymusic.lib.RSA import RSA
@@ -21,7 +24,6 @@ class Source(SourceModel):
     SEARCH_URL = 'https://music.migu.cn/v3/search'
     SOURCE_URL = 'https://music.migu.cn/v3/api/music/audioPlayer/getPlayInfo'
     LOGIN_URL = 'https://passport.migu.cn/authn'
-    LOGIN_CALLBACK_URL = 'https://music.migu.cn/v3/user/login'
     PUBLICKEY_URL = 'https://passport.migu.cn/password/publickey'
 
     def __init__(
@@ -31,9 +33,11 @@ class Source(SourceModel):
         browser: str | None = None,
     ) -> None:
         super().__init__(loop, path=__file__, browser=browser)
+        self._headers['Referer'] = 'https://music.migu.cn/v3'
         self.__parser = aiofile.AWrapper(fromstring)
         self.__app_info = self._loop.create_task(self.__init_migu_app())
         self.__publickey = self._loop.create_task(self.__init_publickey())
+        self.__data = self._loop.create_task(self.__load_data())
 
     async def _init_cookies(self) -> None:
         self.__init_migu_cookie_id()
@@ -74,7 +78,7 @@ class Source(SourceModel):
         self._cookies['migu_cookie_id'] = \
             get_uuid() + '-n4' + str(self._get_time_stamp(13))
 
-    async def __init_publickey(self):
+    async def __init_publickey(self) -> RSA:
         """初始化公钥."""
 
         sess = await self._session()
@@ -82,7 +86,18 @@ class Source(SourceModel):
         resp = await resp.json(content_type=None)
         if resp['status'] != 2000:
             raise RuntimeError('get publickey error: ' + resp['message'])
-        return resp['result']
+        publickey = resp['result']
+        n, e = publickey['modulus'], publickey['publicExponent']
+        rsa = RSA(n, e)
+        return rsa
+
+    async def __load_data(self):
+        async with aiofile.async_open(self._cp / 'data.txt', 'r') as f:
+            data = await f.read()
+        return dict(
+            line.split('=', 1)
+            for line in data.strip().split('\n')
+        )
 
     def __encrypt(self, params: dict, source_id: str) -> str:
         """加密获取i参数."""
@@ -117,7 +132,6 @@ class Source(SourceModel):
 
     async def _get_info(self, name: str) -> SongInfo:
         sess = await self._session()
-        sess.headers['Referer'] = 'https://music.migu.cn/v3'
         time_stamp = self._get_time_stamp()
         app_info = await self.__app_info
         params = {
@@ -146,7 +160,7 @@ class Source(SourceModel):
             '4ea5c508a6566e76240543f8feb06fd457777be39549c4016436afda65d2330e'
         data = {
             'copyrightId': source_id,
-            'type': 2,
+            'type': 2,  # """ type: 标准:1 高品:2 无损:3,至臻:4 3D:5 """
             "auditionsFlag": 11,
         }
         data = json.dumps(data).replace(' ', '')
@@ -186,26 +200,18 @@ class Source(SourceModel):
         sess = await self._session()
         app_info = await self.__app_info
         publickey = await self.__publickey
-        n, e = publickey['modulus'], publickey['publicExponent']
-        rsa = RSA(n, e)
-        if not hasattr(self, '_fingerPrintDetail'):
-            async with aiofile.async_open(self._cp / 'data.txt', 'r') as f:
-                self._fingerPrintDetail = (await f.read()).strip()
+        login_data = await self.__data
         data = {
             'sourceID': app_info['SOURCE_ID'],
             'appType': '0',
             'relayState': '',
-            'loginID': rsa.encrypt(login_id),
-            'enpassword': rsa.encrypt(password),
+            'loginID': publickey.encrypt(login_id),
+            'enpassword': publickey.encrypt(password),
             'captcha': '',
             'imgcodeType': '1',
             'rememberMeBox': '1',
-            'fingerPrint':
-            '365f397d7a702e0ba61a0c81be7447500c0568561479bcb3da6ba896070cc336f'
-            '6e8e3d5051a38a243ac8cfc57c642c897e04785ab7e2fbc9c674322cd697a3e70'
-            '389cf3b5ae23e117294f895975aece81c93854dd97025f55cab44a5ef54a35cc0'
-            '561354a8755a35d0ba0d625b8fab4c4cd8581009ae0c9570fb29ee715fed3',
-            'fingerPrintDetail': self._fingerPrintDetail,
+            'fingerPrint': login_data['fingerPrint'],
+            'fingerPrintDetail': login_data['fingerPrintDetail'],
             'isAsync': 'true',
         }
         resp = await sess.post(self.LOGIN_URL, data=data)
@@ -213,19 +219,125 @@ class Source(SourceModel):
         if resp['status'] != 2000:
             raise RuntimeError(resp['message'])
         token = resp['result']['token']
+        login_callback_url = resp['result']['redirectURL']
         params = {
             'callbackURL': 'https://music.migu.cn/v3',
             'relayState': '',
             'token': token,
             'logintype': 'PWD',
         }
-        sess.headers['Referer'] = 'https://passport.migu.cn/'
-        async with sess.get(self.LOGIN_CALLBACK_URL, params=params) as resp:
-            assert resp.status == 200, '请求错误'
+        async with sess.get(login_callback_url, params=params) as resp:
+            if resp.status != 200:
+                raise RuntimeError('unknown error occured')
         await self.save_config(password=password, login_id=login_id)
+
+    async def __login_by_qr(self, callback, *_) -> Image:
+        check_login = None
+        try:
+            qrimg = await self.__fetch_qrimg()
+            return qrimg
+        finally:
+            if check_login is not None:
+                task = self._loop.create_task(check_login())
+                task.add_done_callback(callback)
+
+    async def __fetch_qrimg(self) -> Image:
+        sess = await self._session()
+        qr_url = 'https://passport.migu.cn/api/qrcWeb/qrcLogin'
+        app_info = await self.__app_info
+        params = {
+            'sourceID': app_info['SOURCE_ID'],
+        }
+        data = {
+            'isAsync': 'true',
+            'sourceid': app_info['SOURCE_ID'],
+        }
+        resp = await sess.post(qr_url, data=data, params=params)
+        resp_dict = await resp.json(content_type=None)
+        if resp_dict['status'] != 2000:
+            raise RuntimeError('get qrcurl error')
+        b64_str: str = resp_dict['result']['qrcUrl']
+        prefix = 'data:image/jpeg;base64,'
+        if b64_str.startswith(prefix):
+            b64_str = b64_str[len(prefix):]
+        qrimg_data = b64decode(b64_str)
+        qrimg = BytesIO(qrimg_data)
+        qrimg = Image.open(qrimg)
+        return qrimg
+
+    async def __check_qr_login_status(self) -> None:
+        await asyncio.sleep(3)
+
+    def __login_by_sms(self) -> tuple:
+        async def send_sms(cellphone: str) -> None:
+            sess = await self._session()
+            app_info = await self.__app_info
+            login_data = await self.__data
+            sms_url = 'https://passport.migu.cn/login/dynamicpassword'
+            params = {
+                'isAsync': 'true',
+                'msisdn': login_data['msisdn'],
+                'captcha': '',
+                'sourceID': app_info['SOURCE_ID'],
+                'imgcodeType': 2,
+                'fingerPrint': login_data['fingerPrint'],
+                'fingerPrintDetail': login_data['fingerPrintDetail'],
+                '_': self._get_time_stamp(bit=13),
+            }
+            resp = await sess.get(sms_url, params=params)
+            resp_dict = await resp.json(content_type=None)
+            __import__('pprint').pprint(resp_dict)
+            if resp_dict['status'] != 2000:
+                raise RuntimeError(resp_dict['message'])
+            nonlocal last_cellphone
+            last_cellphone = cellphone
+
+        async def login(cellphone: str, verify_code: str):
+            if not last_cellphone:
+                raise RuntimeError('it seems that you have not sended sms yet')
+            elif cellphone != last_cellphone:
+                raise RuntimeError('the cellphone is not the same as the last')
+            sess = await self._session()
+            app_info = await self.__app_info
+            publickey = await self.__publickey
+            login_data = await self.__data
+            login_url = 'https://passport.migu.cn/authn/dynamicpassword'
+            data = {
+                'sourceID': app_info['SOURCE_ID'],
+                'appType': 0,
+                'relayState': '',
+                'msisdn': login_data['msisdn'],
+                'securityCode': 4053,
+                'captcha': '',
+                'imgcodeType': 2,
+                'dynamicPassword': publickey.encrypt(verify_code),
+                'fingerPrint': login_data['fingerPrint'],
+                'fingerPrintDetail': login_data['fingerPrintDetail'],
+                'isAsync': 'true',
+            }
+            resp = await sess.post(login_url, data=data)
+            resp_dict = await resp.json(content_type=None)
+            if resp_dict['status'] != 2000:
+                raise RuntimeError(resp_dict['message'])
+            token = resp_dict['result']['token']
+            login_callback_url = resp_dict['result']['redirectURL']
+            params = {
+                'callbackURL': 'https://music.migu.cn/v3',
+                'relayState': '',
+                'token': token,
+                'logintype': 'PWD',
+            }
+            async with sess.get(login_callback_url, params=params) as resp:
+                if resp.status != 200:
+                    raise RuntimeError('unknown error occured')
+
+        last_cellphone = ''
+        return send_sms, login
 
     def check_login(self) -> LoginConfig:
         return LoginConfig(
             check_id=False,
             PWD_callback=self.__login_by_pwd,
+            # QR_callback=self.__login_by_qr,
+            SMS_callback=self.__login_by_sms,
         )

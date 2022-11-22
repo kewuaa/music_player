@@ -7,3 +7,8 @@ command:python=$(+default_pyenv) <root>/main.py
 
 cwd=<root>
 
+[run-file]
+
+command:python=$(+default_pyenv) "$(VIM_FILEPATH)"
+cwd=<cwd>
+

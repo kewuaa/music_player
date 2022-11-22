@@ -77,9 +77,11 @@ class LoginDialog:
     def __login_callback(self, fut: Future):
         exception = fut.exception()
         if exception is not None:
+            print('[ERROR]:', exception)
             self.log(str(exception) or 'unknown error')
         else:
-            self.close()
+            self.log('登陆成功', color='blue')
+            self.__tl.after(100, self.close)
 
     def __accept_callback(self) -> None:
         """接受事件."""
@@ -89,6 +91,7 @@ class LoginDialog:
             if self.visible(tab_id):
                 callback = self.__callbacks[tab_id]
                 assert callable(callback)
+                self.__tl.message_label.configure(text='')
                 task: Future = callback()
                 if task is not None:
                     task.add_done_callback(self.__login_callback)
@@ -114,12 +117,15 @@ class LoginDialog:
             else:
                 self.__tl.accept_button.grid()
                 if task is not None:
-                    asynctk.call_soon(task._special_callback)
+                    if hasattr(task, '_special_callback'):
+                        asynctk.call_soon(task._special_callback)
                     task = None
 
         task: Future = None
         self.__done_befor_close = lambda: \
-            task._special_callback() if task is not None else None
+            task._special_callback() \
+            if task is not None and hasattr(task, '_special_callback') \
+            else None
         loop = asynctk._callback_loop
         notebook = self.__tl.notebook
         notebook.unbind_all('<<NotebookTabChanged>>')
@@ -130,16 +136,20 @@ class LoginDialog:
         if exception is not None:
             self.log(str(exception) or 'unknow error')
             return
-        scan_url = fut.result()
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=2,
-        )
-        qr.add_data(scan_url)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color='black', back_color='white')
+        qrimg = fut.result()
+        if type(qrimg) is str:
+            scan_url = qrimg
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=2,
+            )
+            qr.add_data(scan_url)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color='black', back_color='white')
+        else:
+            img = qrimg
         qr_label = self.__tl.qr_code_label
         size = int(qr_label.winfo_width() / 1.5), \
             int(qr_label.winfo_height() / 1.5)

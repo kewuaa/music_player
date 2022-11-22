@@ -3,6 +3,7 @@ from typing import Sequence
 from typing import Tuple
 from typing import Dict
 from typing import List
+from typing import Any
 from http.cookies import SimpleCookie
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,7 +31,7 @@ class LoginConfig:
     need_verify: bool = False
     check_id: bool = True
     PWD_callback: Callable[[str, str], None] | None = None
-    QR_callback: Callable[[Callable], str] | None = None
+    QR_callback: Callable[[Callable], Any] | None = None
     SMS_callback: Callable[
         [], Tuple[Callable[[str], None], Callable[[str, str], None]]
     ] | None = None
@@ -127,7 +128,7 @@ class SourceModel:
         返回允许的登录方式.
         """
 
-        raise NotImplementedError
+        return LoginConfig()
 
     def _cookie_str2dict(self, cookies: str) -> Dict:
         """将cookie字符串转换为字典.
@@ -178,7 +179,8 @@ class SongInfo:
         return ' -> '.join(self.__summary)
 
     async def url(self) -> str:
-        if not hasattr(self, '_url'):
+        url = getattr(self, '_url', None)
+        if url is None:
             url = await self.__from._get_source(self.__id)
         if type(url) is str:
             self._url = url

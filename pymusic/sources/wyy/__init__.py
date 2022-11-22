@@ -146,7 +146,7 @@ class Source(SourceModel):
         if resp_code != 200:
             raise RuntimeError(resp_dict.get('message', '登录失败'))
 
-    async def __login_by_qr(self, callback, *_) -> None:
+    async def __login_by_qr(self, callback, *_) -> str:
         """二维码扫描登录."""
 
         def cancel():
@@ -233,8 +233,6 @@ class Source(SourceModel):
         async def send_sms(cellphone: str) -> None:
             """发送验证码."""
 
-            nonlocal last_cellphone
-            last_cellphone = cellphone
             sess = await self._session()
             sms_url = 'http://music.163.com/weapi/sms/captcha/sent'
             data = {
@@ -250,9 +248,13 @@ class Source(SourceModel):
             resp_dict = await resp.json(content_type=None)
             if resp_dict['code'] != 200:
                 raise RuntimeError('send sms error')
+            nonlocal last_cellphone
+            last_cellphone = cellphone
 
         async def login(cellphone: str, verify_code: str) -> None:
-            if cellphone != last_cellphone:
+            if not last_cellphone:
+                raise RuntimeError('it seems that you have not sended sms yet')
+            elif cellphone != last_cellphone:
                 raise RuntimeError('the cellphone is not the same as the last')
             sess = await self._session()
             verify_url = 'http://music.163.com/weapi/sms/captcha/verify'

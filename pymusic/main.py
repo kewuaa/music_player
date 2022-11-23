@@ -28,6 +28,7 @@ class App(PlayerApp):
     def __init__(self) -> None:
         root = asynctk.AsyncTk()
         super().__init__(root)
+        assert self.mainwindow is root
         asynctk.add_done_before_exit(self.quit)
         self.mainwindow.after(300, self.__init_after)
         sources.set_stdout(partial(tk.messagebox.showinfo, 'info'))
@@ -130,7 +131,7 @@ class App(PlayerApp):
             self.mainwindow.attributes('-fullscreen', if_fullscreen)
 
         if_fullscreen = False
-        self.mainwindow.bind('<F11>', toggle_fullscreen)
+        self.mainwindow.bind_all('<F11>', toggle_fullscreen)
 
         self.style_submenu.add_command(
             label='load more',
@@ -525,7 +526,10 @@ class App(PlayerApp):
             tasks = []
             for item in list_:
                 task = self.__loop.create_task(item.download())
-                task.add_done_callback(lambda fut: list_.remove(fut.result()))
+                task.add_done_callback(
+                    lambda fut: list_.remove(fut.result())
+                    if fut.exception() is None else None
+                )
                 tasks.append(task)
             for task in tasks:
                 await task
@@ -547,7 +551,7 @@ class App(PlayerApp):
         if not login_config.enabled:
             tk.messagebox.showinfo(
                 'info',
-                'current source not support login yet',
+                login_config.message,
             )
             return
         dialog.reset(login_config)

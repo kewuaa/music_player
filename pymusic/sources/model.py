@@ -28,6 +28,7 @@ def set_stdout(stdout: Callable[[str], None]) -> None:
 
 @dataclass(repr=False, order=False, eq=False)
 class LoginConfig:
+    message: str = 'The login function is not completed yet'
     need_verify: bool = False
     check_id: bool = True
     PWD_callback: Callable[[str, str], None] | None = None
@@ -196,7 +197,7 @@ class SongInfo:
         if not hasattr(self, '_path'):
             url: str = await self.url()
             if url is None:
-                return 1
+                raise RuntimeError('could not get url successfully')
             suffix: str = url.split('.')[-1]
             name = self.__name + '.' + suffix
             self._path = path = self.__base_path / name

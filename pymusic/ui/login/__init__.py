@@ -26,7 +26,8 @@ class LoginDialog:
         master = master or tk.Tk()
         self.__master = master
         self.__done_befor_close = None
-        self.__callbacks = [None] * 3
+        self.__accept_callbacks = [None] * 3
+        self.__toggle_callbacks = [None] * 3
         self.__init_toplevel()
 
     def __init_toplevel(self) -> None:
@@ -41,6 +42,7 @@ class LoginDialog:
         )
         tl.cancel_button.configure(command=self.close)
         tl.accept_button.configure(command=self.__accept_callback)
+        tl.notebook.bind('<<NotebookTabChanged>>', self.__toggle_callback)
         tl.notebook.enable_traversal()
 
     def __center_window(self):
@@ -86,18 +88,30 @@ class LoginDialog:
     def __accept_callback(self) -> None:
         """接受事件."""
 
-        for tab in LoginType:
-            tab_id = tab.value
-            if self.visible(tab_id):
-                callback = self.__callbacks[tab_id]
-                assert callable(callback)
-                self.__tl.message_label.configure(text='')
-                task: Future = callback()
-                if task is not None:
-                    task.add_done_callback(self.__login_callback)
-                break
+        notebook = self.__tl.notebook
+        tab_id = notebook.index('current')
+        callback = self.__accept_callbacks[tab_id]
+        self.__tl.message_label.configure(text='')
+        task: Future = callback()
+        if task is not None:
+            task.add_done_callback(self.__login_callback)
 
-    def __toggle_bind(self, fetch_img) -> None:
+    def __toggle_callback(self, event: tk.Event) -> None:
+        notebook = self.__tl.notebook
+        try:
+            tab_id = notebook.index('current')
+        except tk.TclError:
+            return
+        if tab_id == LoginType.QR:
+            self.__tl.accept_button.grid_remove()
+        else:
+            self.__tl.accept_button.grid()
+        callback = self.__toggle_callbacks[tab_id]
+        if callback is None:
+            return
+        callback()
+
+    def __QR_callback(self, fetch_img):
         """切换tab触发事件."""
 
         def create_task() -> None:
@@ -105,31 +119,34 @@ class LoginDialog:
             task = loop.create_task(fetch_img(self.__login_callback))
             task.add_done_callback(self.__update_qrcode)
 
-        def func(event: tk.Event):
+        def callback():
+            nonlocal callback_funcid
+            loop.call_soon_threadsafe(create_task)
+            callback_funcid = notebook.bind(
+                '<<NotebookTabChanged>>',
+                cancel_callback,
+                add='+',
+            )
+
+        def cancel_task():
+            if hasattr(task, '_special_callback'):
+                task._special_callback()
+
+        def cancel_callback(event: tk.Event) -> None:
             try:
                 tab_id = notebook.index('current')
             except tk.TclError:
                 return
-            nonlocal task
-            if tab_id == LoginType.QR:
-                self.__tl.accept_button.grid_remove()
-                loop.call_soon_threadsafe(create_task)
-            else:
-                self.__tl.accept_button.grid()
-                if task is not None:
-                    if hasattr(task, '_special_callback'):
-                        asynctk.call_soon(task._special_callback)
-                    task = None
+            if tab_id != LoginType.QR:
+                cancel_task()
+                notebook.unbind('<<NotebookTabChanged>>', callback_funcid)
 
         task: Future = None
-        self.__done_befor_close = lambda: \
-            task._special_callback() \
-            if task is not None and hasattr(task, '_special_callback') \
-            else None
         loop = asynctk._callback_loop
         notebook = self.__tl.notebook
-        notebook.unbind_all('<<NotebookTabChanged>>')
-        notebook.bind('<<NotebookTabChanged>>', func)
+        callback_funcid = None
+        self.__done_befor_close = cancel_task
+        return callback
 
     def __update_qrcode(self, fut: Future) -> None:
         exception = fut.exception()
@@ -200,17 +217,18 @@ class LoginDialog:
             if callback is not None:
                 state = 'normal'
                 if login_type is LoginType.PWD:
-                    self.__callbacks[tab_id] = partial(
+                    self.__accept_callbacks[tab_id] = partial(
                         self.__PWD_callback,
                         config,
                         callback,
                     )
                 elif login_type is LoginType.QR:
-                    self.__toggle_bind(callback)
+                    self.__toggle_callbacks[tab_id] = \
+                        self.__QR_callback(callback)
                 elif login_type is LoginType.SMS:
                     send_sms, login = callback()
                     self.__bind_sms_func(send_sms)
-                    self.__callbacks[tab_id] = partial(
+                    self.__accept_callbacks[tab_id] = partial(
                         self.__SMS_callback,
                         config,
                         login,

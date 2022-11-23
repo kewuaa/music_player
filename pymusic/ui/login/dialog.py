@@ -2,10 +2,26 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 
+class Notebook(ttk.Notebook):
+    def unbind(self, sequence, funcid=None):
+        if not funcid:
+            self.tk.call('bind', self._w, sequence, '')
+            return
+        func_callbacks = \
+            self.tk.call('bind', self._w, sequence, None).split('\n')
+        new_callbacks = [
+            callback
+            for callback in func_callbacks
+            if callback[6:6 + len(funcid)] != funcid
+        ]
+        self.tk.call('bind', self._w, sequence, '\n'.join(new_callbacks))
+        self.deletecommand(funcid)
+
+
 class LoginToplevel(tk.Toplevel):
     def __init__(self, master=None, **kw):
         super().__init__(master, **kw)
-        self.notebook = ttk.Notebook(self)
+        self.notebook = Notebook(self)
         self.frame9 = ttk.Frame(self.notebook)
         self.label4 = ttk.Label(self.frame9)
         self.label4.configure(text="账号")

@@ -25,7 +25,7 @@ class LoginDialog:
     def __init__(self, master=None) -> None:
         master = master or tk.Tk()
         self.__master = master
-        self.__done_befor_close = None
+        self.__done_befor_close = set()
         self.__accept_callbacks = [None] * 3
         self.__toggle_callbacks = [None] * 3
         self.__init_toplevel()
@@ -65,16 +65,38 @@ class LoginDialog:
         geom = "{0}x{1}+{2}+{3}".format(width, height, x_coord, y_coord)
         window.geometry(geom)
 
-    def __run(self) -> None:
-        """运行."""
+    def visible(self, tab_id: int) -> bool:
+        notebook = self.__tl.notebook
+        tab_name = notebook.tabs()[tab_id]
+        frame: tk.Frame = self.__master.nametowidget(tab_name)
+        return frame.winfo_ismapped()
 
-        self.__center_window()
+    def __parse_img(self, source) -> Image:
+        if type(source) is str:
+            scan_url = source
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=2,
+            )
+            qr.add_data(scan_url)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color='black', back_color='white')
+        else:
+            img = source
+        return img
+
+    def __refresh_img(self, label_type: LoginType, source) -> None:
         tl = self.__tl
-        tl.deiconify()
-        tl.wait_visibility()
-        initial_focus = tl.focus_lastfor()
-        if initial_focus:
-            initial_focus.focus_set()
+        label = (tl.verify_label, tl.qr_code_label, None)[label_type.value]
+        img = self.__parse_img(source)
+        size = int(label.winfo_width() / 1.5), \
+            int(label.winfo_height() / 1.5)
+        img = img.resize(size, Image.ANTIALIAS)
+        img = ImageTk.PhotoImage(img)
+        label.configure(image=img)
+        label.img = img
 
     def __login_callback(self, fut: Future):
         exception = fut.exception()
@@ -102,6 +124,7 @@ class LoginDialog:
             tab_id = notebook.index('current')
         except tk.TclError:
             return
+        self.__tl.message_label.configure(text='')
         if tab_id == LoginType.QR:
             self.__tl.accept_button.grid_remove()
         else:
@@ -127,10 +150,12 @@ class LoginDialog:
                 cancel_callback,
                 add='+',
             )
+            self.__done_befor_close.add(cancel_task)
 
         def cancel_task():
             if hasattr(task, '_special_callback'):
                 task._special_callback()
+                self.__done_befor_close.discard(cancel_task)
 
         def cancel_callback(event: tk.Event) -> None:
             try:
@@ -145,7 +170,6 @@ class LoginDialog:
         loop = asynctk._callback_loop
         notebook = self.__tl.notebook
         callback_funcid = None
-        self.__done_befor_close = cancel_task
         return callback
 
     def __update_qrcode(self, fut: Future) -> None:
@@ -153,27 +177,63 @@ class LoginDialog:
         if exception is not None:
             self.log(str(exception) or 'unknow error')
             return
-        qrimg = fut.result()
-        if type(qrimg) is str:
-            scan_url = qrimg
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10,
-                border=2,
-            )
-            qr.add_data(scan_url)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color='black', back_color='white')
+        source = fut.result()
+        self.__refresh_img(LoginType.QR, source)
+
+    def __PWD_callback(
+        self,
+        need_verify: bool,
+        check_id: bool,
+        callback,
+    ) -> Future | None:
+        tl = self.__tl
+        need_verify = need_verify
+        login_id = tl.id_entry.get().strip()
+        password = tl.password_entry.get()
+        verify_code = tl.verify_entry.get().strip()
+        if not login_id:
+            self.log('请输入账号')
+            return
+        if check_id:
+            s = set(login_id)
+            if len(s | set('0123456789')) > 10:
+                self.log('账号不能包含非数字字符')
+                return
+        if not password:
+            self.log('请输入密码')
+            return
+        if need_verify and not verify_code:
+            self.log('请输入验证码')
+            return
+        return asynctk.create_task(callback(login_id, password, verify_code))
+
+    def update_pwd(self, config: dict) -> None:
+        tl = self.__tl
+        tl.id_entry.delete(0, 'end')
+        tl.id_entry.insert(0, config.get('login_id', ''))
+        tl.password_entry.delete(0, 'end')
+        tl.password_entry.insert(0, config.get('password', ''))
+
+    def __SMS_callback(self, need_verify: bool, callback) -> Future | None:
+        tl = self.__tl
+        cellphone = tl.phone_entry.get().strip()
+        verify_code = tl.sms_verify_entry.get().strip()
+        img_verify_code = tl.sms_img_verify_entry.get().strip()
+        if not cellphone:
+            self.log('请输入电话号码')
+            return
         else:
-            img = qrimg
-        qr_label = self.__tl.qr_code_label
-        size = int(qr_label.winfo_width() / 1.5), \
-            int(qr_label.winfo_height() / 1.5)
-        img = img.resize(size, Image.ANTIALIAS)
-        img = ImageTk.PhotoImage(img)
-        qr_label.configure(image=img)
-        qr_label.img = img
+            s = set(cellphone)
+            if len(cellphone) != 11 or len(s | set('0123456789')) > 10:
+                self.log('请输入正确的电话号码')
+                return
+        if not verify_code:
+            self.log('请输入短信验证码')
+            return
+        if need_verify and not img_verify_code:
+            self.log('请输入图形验证码')
+            return
+        return asynctk.create_task(callback(cellphone, verify_code))
 
     def __bind_sms_func(self, func) -> None:
         def command():
@@ -195,6 +255,15 @@ class LoginDialog:
         assert iscoroutinefunction(func)
         self.__tl.sms_button.configure(command=command)
 
+    def __verify(self, label_type: LoginType, fetch_img):
+        def refresh_callback(fut: Future):
+            if fut.exception() is not None:
+                raise RuntimeError('unknown error')
+            source = fut.result()
+            self.__refresh_img(label_type, source)
+
+        asynctk.create_task(fetch_img()).add_done_callback(refresh_callback)
+
     def reset(
         self,
         config: LoginConfig,
@@ -203,9 +272,6 @@ class LoginDialog:
 
         tl = self.__tl
         notebook = tl.notebook
-        tl.verify_entry.configure(
-            state='normal' if config.need_verify else 'disabled',
-        )
         callbacks = (
             config.PWD_callback,
             config.QR_callback,
@@ -217,75 +283,41 @@ class LoginDialog:
             if callback is not None:
                 state = 'normal'
                 if login_type is LoginType.PWD:
+                    login, *verify = callback
+                    need_verify = False
+                    verify_state = 'disabled'
+                    if verify:
+                        need_verify = True
+                        verify_state = 'normal'
+                        self.__toggle_callbacks[tab_id] = \
+                            self.__verify(LoginType.PWD, verify[0])
+                    tl.verify_entry.configure(state=verify_state)
                     self.__accept_callbacks[tab_id] = partial(
                         self.__PWD_callback,
-                        config,
-                        callback,
+                        need_verify,
+                        config.check_id,
+                        login,
                     )
                 elif login_type is LoginType.QR:
+                    fetch_img, *_ = callback
                     self.__toggle_callbacks[tab_id] = \
-                        self.__QR_callback(callback)
+                        self.__QR_callback(fetch_img)
                 elif login_type is LoginType.SMS:
-                    send_sms, login = callback()
+                    send_sms, login, *verify = callback
+                    need_verify = False
+                    verify_state = 'disabled'
+                    if verify:
+                        need_verify = True
+                        verify_state = 'normal'
+                        self.__toggle_callbacks[tab_id] = \
+                            self.__verify(LoginType.SMS, verify[0])
+                    tl.sms_img_verify_entry.configure(state=verify_state)
                     self.__bind_sms_func(send_sms)
                     self.__accept_callbacks[tab_id] = partial(
                         self.__SMS_callback,
-                        config,
                         login,
                     )
             notebook.tab(tab_id, state=state)
-
-    def visible(self, tab_id: int) -> bool:
-        notebook = self.__tl.notebook
-        tab_name = notebook.tabs()[tab_id]
-        frame: tk.Frame = self.__master.nametowidget(tab_name)
-        return frame.winfo_ismapped()
-
-    def update_pwd(self, config: dict) -> None:
-        tl = self.__tl
-        tl.id_entry.delete(0, 'end')
-        tl.id_entry.insert(0, config.get('login_id', ''))
-        tl.password_entry.delete(0, 'end')
-        tl.password_entry.insert(0, config.get('password', ''))
-
-    def __PWD_callback(self, config: LoginConfig, callback) -> Future | None:
-        tl = self.__tl
-        need_verify = config.need_verify
-        login_id = tl.id_entry.get().strip()
-        password = tl.password_entry.get()
-        verify_code = tl.verify_entry.get().strip()
-        if not login_id:
-            self.log('请输入账号')
-            return
-        if config.check_id:
-            s = set(login_id)
-            if len(s | set('0123456789')) > 10:
-                self.log('账号不能包含非数字字符')
-                return
-        if not password:
-            self.log('请输入密码')
-            return
-        if need_verify and not verify_code:
-            self.log('请输入验证码')
-            return
-        return asynctk.create_task(callback(login_id, password, verify_code))
-
-    def __SMS_callback(self, config: LoginConfig, callback) -> Future | None:
-        tl = self.__tl
-        cellphone = tl.phone_entry.get().strip()
-        verify_code = tl.sms_verify_entry.get().strip()
-        if not cellphone:
-            self.log('请输入电话号码')
-            return
-        else:
-            s = set(cellphone)
-            if len(cellphone) != 11 or len(s | set('0123456789')) > 10:
-                self.log('请输入正确的电话号码')
-                return
-        if not verify_code:
-            self.log('请输入短信验证码')
-            return
-        return asynctk.create_task(callback(cellphone, verify_code))
 
     def log(self, msg, color: str = None) -> None:
         """打印消息."""
@@ -295,6 +327,17 @@ class LoginDialog:
             foreground=color or 'red',
         )
 
+    def __run(self) -> None:
+        """运行."""
+
+        self.__center_window()
+        tl = self.__tl
+        tl.deiconify()
+        tl.wait_visibility()
+        initial_focus = tl.focus_lastfor()
+        if initial_focus:
+            initial_focus.focus_set()
+
     def show(self) -> None:
         """显示."""
 
@@ -303,8 +346,8 @@ class LoginDialog:
     def close(self) -> None:
         """关闭."""
 
-        if self.__done_befor_close is not None:
-            self.__done_befor_close()
+        for func in self.__done_befor_close.copy():
+            func()
         tl = self.__tl
         tl.withdraw()
         tl.message_label.configure(text='')
@@ -313,6 +356,6 @@ class LoginDialog:
     def destroy(self) -> None:
         """销毁."""
 
-        if self.__done_befor_close is not None:
-            self.__done_befor_close()
+        for func in self.__done_befor_close.copy():
+            func()
         self.__tl.destroy()

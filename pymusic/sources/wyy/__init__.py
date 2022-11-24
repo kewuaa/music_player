@@ -284,7 +284,7 @@ class Source(SourceModel):
     def check_login(self) -> LoginConfig:
         return LoginConfig(
             check_id=False,
-            PWD_callback=self.__login_by_pwd,
-            QR_callback=self.__login_by_qr,
-            SMS_callback=self.__login_by_sms,
+            PWD_callback=(self.__login_by_pwd,),
+            QR_callback=(self.__login_by_qr,),
+            SMS_callback=self.__login_by_sms(),
         )

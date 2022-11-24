@@ -68,7 +68,7 @@ class App(PlayerApp):
                 label=style_name,
                 command=partial(style.theme_use, style_name),
             )
-        style.theme_use('winnative')
+        style.theme_use('xpnative')
         self.style_submenu.add('separator')
 
         options = list(sources.SOURCE_OPTIONS.keys())

@@ -3,7 +3,6 @@ from typing import Sequence
 from typing import Tuple
 from typing import Dict
 from typing import List
-from typing import Any
 from http.cookies import SimpleCookie
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,13 +28,10 @@ def set_stdout(stdout: Callable[[str], None]) -> None:
 @dataclass(repr=False, order=False, eq=False)
 class LoginConfig:
     message: str = 'The login function is not completed yet'
-    need_verify: bool = False
     check_id: bool = True
-    PWD_callback: Callable[[str, str], None] | None = None
-    QR_callback: Callable[[Callable], Any] | None = None
-    SMS_callback: Callable[
-        [], Tuple[Callable[[str], None], Callable[[str, str], None]]
-    ] | None = None
+    PWD_callback: Tuple[Callable] | None = None
+    QR_callback: Tuple[Callable] | None = None
+    SMS_callback: Tuple[Callable] | None = None
 
     def __post_init__(self) -> None:
         self.enabled = True \

@@ -250,6 +250,7 @@ class Source(SourceModel):
                 raise RuntimeError('send sms error')
             nonlocal last_cellphone
             last_cellphone = cellphone
+            await self.save_config(cellphone=cellphone)
 
         async def login(cellphone: str, verify_code: str) -> None:
             if not last_cellphone:

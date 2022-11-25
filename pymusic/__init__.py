@@ -1,4 +1,4 @@
-from .main import App
+from .core import App
 
 
 def run() -> None:

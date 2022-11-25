@@ -1,11 +1,16 @@
 from time import time
+from io import BytesIO
 from ctypes import c_uint32
+from base64 import b64decode
 from secrets import randbelow
-from http.cookies import SimpleCookie
 import asyncio
+import json
+
+from PIL import Image
 
 from ..model import SongInfo
 from ..model import SourceModel
+from ..model import LoginConfig
 
 
 def int_overflow(val: int) -> int:
@@ -99,11 +104,15 @@ class Source(SourceModel):
     async def _init_cookies(self) -> None:
         self._cookies['kw_token'] = 'LPZZ7D4HRJO'
 
-    async def _get_info(self, name: str) -> list:
-        sess = await self._session()
-        cookies: SimpleCookie = sess.cookie_jar.filter_cookies(self.__domain)
+    async def _session(self):
+        sess = await super()._session()
+        cookies = sess.cookie_jar.filter_cookies(self.__domain)
         csrf = cookies.get('kw_token').value
         sess.headers['csrf'] = csrf
+        return sess
+
+    async def _get_info(self, name: str) -> list:
+        sess = await self._session()
         params = {
             'key': name,
             'rn': 30,
@@ -127,3 +136,70 @@ class Source(SourceModel):
         res_dict = await resp.json(content_type=None)
         data = res_dict['data']
         return data['url']
+
+    async def __fetch_verify_code(self) -> tuple:
+        sess = await self._session()
+        verify_url = 'https://www.kuwo.cn/api/common/captcha/getcode'
+        params = {
+            'reqId': self.__get_reqid(),
+            'httpsStatus': 1,
+        }
+        resp = await sess.get(verify_url, params=params)
+        resp_dict = await resp.json(content_type=None)
+        if resp_dict['code'] != 200:
+            raise RuntimeError(resp_dict['msg'])
+        verify_img_str = b64_str = resp_dict['data']['img']
+        verify_token = resp_dict['data']['token']
+        prefix = 'data:image/jpeg;base64,'
+        if b64_str.startswith(prefix):
+            b64_str = b64_str[len(prefix):]
+        verify_img_data = b64decode(b64_str)
+        verify_img = BytesIO(verify_img_data)
+        verify_img = Image.open(verify_img)
+        return verify_img, verify_img_str, verify_token
+
+    def __login_by_PWD(self) -> None:
+        async def fetch_verify_code() -> Image:
+            nonlocal verify_img_str, verify_token
+            verify_img, verify_img_str, verify_token = \
+                await self.__fetch_verify_code()
+            return verify_img
+
+        async def login(login_id: str, password: str, verify_code: str):
+            assert verify_img_str and verify_token
+            await self.save_config(login_id=login_id)
+            sess = await self._session()
+            sess.headers['Content-Type'] = 'application/json;charset=UTF-8'
+            login_url = 'https://www.kuwo.cn/api/www/login/loginByKw'
+            params = {
+                'reqId': self.__get_reqid(),
+                'httpsStatus': 1,
+            }
+            data = {
+                'userIp': 'www.kuwo.cn',
+                'uname': login_id,
+                'password': password,
+                'verifyCode': verify_code,
+                'img': verify_img_str,
+                'verifyCodeToken': verify_token,
+            }
+            resp = await sess.post(
+                login_url,
+                params=params,
+                data=json.dumps(data),
+            )
+            resp_dict = await resp.json(content_type=None)
+            code = resp_dict.get('code') or resp_dict['status']
+            if code != 200:
+                raise RuntimeError(
+                    resp_dict.get('msg') or resp_dict['message'])
+            await self.save_config(login_id=login_id, password=password)
+
+        verify_img_str = ''
+        verify_token = ''
+        return login, fetch_verify_code
+
+    def check_login(self) -> LoginConfig:
+        return LoginConfig(
+            PWD_callback=self.__login_by_PWD(),
+        )

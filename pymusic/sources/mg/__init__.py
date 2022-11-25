@@ -197,6 +197,7 @@ class Source(SourceModel):
         password: str,
         *_,
     ) -> None:
+        await self.save_config(login_id=login_id)
         sess = await self._session()
         app_info = await self.__app_info
         publickey = await self.__publickey
@@ -229,7 +230,7 @@ class Source(SourceModel):
         async with sess.get(login_callback_url, params=params) as resp:
             if resp.status != 200:
                 raise RuntimeError('unknown error occured')
-        await self.save_config(password=password, login_id=login_id)
+        await self.save_config(login_id=login_id, password=password)
 
     async def __login_by_qr(self, callback, *_) -> Image:
         check_login = None
@@ -291,6 +292,7 @@ class Source(SourceModel):
                 raise RuntimeError(resp_dict['message'])
             nonlocal last_cellphone
             last_cellphone = cellphone
+            await self.save_config(cellphone=cellphone)
 
         async def login(cellphone: str, verify_code: str):
             if not last_cellphone:

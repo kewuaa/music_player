@@ -14,9 +14,9 @@ from pymusic import sources
 from pymusic.sources.model import SourceModel
 from pymusic.sources.model import SongInfo
 from pymusic.ui import PlayerApp
-from pymusic.ui.login import LoginDialog
 from pymusic.lib.plist import PlayList
 from pymusic.lib import asynctk
+from .login import LoginDialog
 
 
 current_path = Path(__file__).parent
@@ -220,7 +220,7 @@ class App(PlayerApp):
             if config:
                 widget.configure(image=img)
 
-        icons_path = current_path / './icons'
+        icons_path = current_path / '../icons'
         await fit_widget(self.search_button, 'search.png')
         await fit_widget(self.volume_button, 'sound_on.png')
         await fit_widget(self.previous_button, 'previous.png')
@@ -557,7 +557,7 @@ class App(PlayerApp):
         dialog.reset(login_config)
         dialog.show()
         asynctk.create_task(source.check_settings()).add_done_callback(
-            lambda fut: dialog.update_pwd(fut.result())
+            lambda fut: dialog.update_login_info(fut.result())
             if fut.result() is not None else None
         )
 

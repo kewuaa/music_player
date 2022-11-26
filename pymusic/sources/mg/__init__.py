@@ -195,7 +195,6 @@ class Source(SourceModel):
         self,
         login_id: str,
         password: str,
-        *_,
     ) -> None:
         await self.save_config(login_id=login_id)
         sess = await self._session()
@@ -232,7 +231,7 @@ class Source(SourceModel):
                 raise RuntimeError('unknown error occured')
         await self.save_config(login_id=login_id, password=password)
 
-    async def __login_by_qr(self, callback, *_) -> Image:
+    async def __login_by_qr(self, callback) -> Image:
         check_login = None
         try:
             qrimg = await self.__fetch_qrimg()

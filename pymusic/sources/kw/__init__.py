@@ -84,6 +84,7 @@ class Source(SourceModel):
         super().__init__(loop, path=__file__, browser=browser)
         self.__domain = 'https://www.kuwo.cn/'
         self._headers['Referer'] = self.__domain
+        self._headers['Content-Type'] = 'application/json;charset=UTF-8'
         self.__get_reqid = reqid()
 
     def __parse_data(self, data: list) -> list:
@@ -169,7 +170,6 @@ class Source(SourceModel):
             assert verify_img_str and verify_token
             await self.save_config(login_id=login_id)
             sess = await self._session()
-            sess.headers['Content-Type'] = 'application/json;charset=UTF-8'
             login_url = 'https://www.kuwo.cn/api/www/login/loginByKw'
             params = {
                 'reqId': self.__get_reqid(),
@@ -199,7 +199,45 @@ class Source(SourceModel):
         verify_token = ''
         return login, fetch_verify_code
 
+    def __login_by_SMS(self) -> tuple:
+        async def send_sms(
+            cellphone: str,
+            verify_code: str,
+        ):
+            sess = await self._session()
+            sms_url = 'https://kuwo.cn/api/sms/mobileLoginCode'
+            params = {
+                'reqId': self.__get_reqid(),
+                'httpsStatus': 1,
+            }
+            data = {
+                'mobile': cellphone,
+                'userIp': 'kuwo.cn',
+                'verifyCode': verify_code,
+                'verifyCodeToken': verify_token,
+            }
+            resp = sess.post(sms_url, params=params, data=json.dumps(data))
+            resp_dict = await resp.json(content_type=None)
+            if resp_dict['code'] != 200:
+                raise RuntimeError('send sms error')
+            nonlocal last_cellphone
+            last_cellphone = cellphone
+
+        async def login():
+            pass
+
+        async def fetch_verify_code():
+            nonlocal verify_token
+            verify_img, verify_img_str, verify_token = \
+                await self.__fetch_verify_code()
+            return verify_img
+
+        last_cellphone = ''
+        verify_token = ''
+        return send_sms, login, fetch_verify_code
+
     def check_login(self) -> LoginConfig:
         return LoginConfig(
             PWD_callback=self.__login_by_PWD(),
+            SMS_callback=self.__login_by_SMS(),
         )

@@ -114,7 +114,6 @@ class Source(SourceModel):
         self,
         login_id,
         password,
-        *args,
     ) -> None:
         """账号密码登录."""
 
@@ -146,7 +145,7 @@ class Source(SourceModel):
         if resp_code != 200:
             raise RuntimeError(resp_dict.get('message', '登录失败'))
 
-    async def __login_by_qr(self, callback, *_) -> str:
+    async def __login_by_qr(self, callback) -> str:
         """二维码扫描登录."""
 
         def cancel():

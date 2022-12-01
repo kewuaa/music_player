@@ -224,7 +224,7 @@ class Source(SourceModel):
             params={'csrf_token': csrf_token},
             data=data,
         )
-        # resp_dict = await resp.json(content_type=None)
+        resp_dict = await resp.json(content_type=None)
 
     def __login_by_sms(self, ctcode: int = 86) -> None:
         """通过短信验证码登录."""

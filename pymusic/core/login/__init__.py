@@ -10,6 +10,7 @@ import qrcode
 
 from pymusic.sources.model import LoginConfig
 from pymusic.ui.login import LoginToplevel
+from pymusic.lib.logger import logger
 from pymusic.lib import asynctk
 
 
@@ -89,7 +90,11 @@ class LoginDialog:
 
     def __refresh_img(self, label_type: LoginType, source) -> None:
         tl = self.__tl
-        label = (tl.verify_label, tl.qr_code_label, None)[label_type.value]
+        label = (
+            tl.verify_label,
+            tl.qr_code_label,
+            tl.sms_verify_label,
+        )[label_type.value]
         img = self.__parse_img(source)
         size = int(label.winfo_width() / 1.5), \
             int(label.winfo_height() / 1.5)
@@ -101,7 +106,7 @@ class LoginDialog:
     def __login_callback(self, fut: Future):
         exception = fut.exception()
         if exception is not None:
-            print('[ERROR]:', exception)
+            logger.error(exception)
             self.log(str(exception) or 'unknown error')
         else:
             self.log('登陆成功', color='blue')
@@ -173,7 +178,7 @@ class LoginDialog:
     def __update_qrcode(self, fut: Future) -> None:
         exception = fut.exception()
         if exception is not None:
-            print('[ERROR]:', exception)
+            logger.error(exception)
             self.log(str(exception) or 'unknow error')
             return
         source = fut.result()
@@ -213,15 +218,15 @@ class LoginDialog:
         tl = self.__tl
         tl.id_entry.insert(0, config.get('login_id', ''))
         tl.password_entry.insert(0, config.get('password', ''))
-        tl.phone_entry.insert(0, config.get('cellphone', ''))
+        tl.cellphone_entry.insert(0, config.get('cellphone', ''))
 
     def __SMS_callback(self, callback) -> Future | None:
         tl = self.__tl
-        cellphone = tl.phone_entry.get().strip()
-        verify_code = tl.sms_img_verify_entry.get().strip() \
-            if str(tl.sms_img_verify_entry['state']) == 'normal' else None
+        cellphone = tl.cellphone_entry.get().strip()
+        sms_code = tl.sms_code_entry.get().strip()
+        verify_code = tl.sms_verify_entry.get().strip() \
+            if str(tl.sms_verify_entry['state']) == 'normal' else None
         need_verify = verify_code is not None
-        img_verify_code = tl.sms_img_verify_entry.get().strip()
         if not cellphone:
             self.log('请输入电话号码')
             return
@@ -230,22 +235,22 @@ class LoginDialog:
             if len(cellphone) != 11 or len(s | set('0123456789')) > 10:
                 self.log('请输入正确的电话号码')
                 return
-        if not verify_code:
+        if not sms_code:
             self.log('请输入短信验证码')
             return
-        if need_verify and not img_verify_code:
+        if need_verify and not verify_code:
             self.log('请输入图形验证码')
             return
-        args = [cellphone, verify_code]
-        if img_verify_code:
-            args.append(img_verify_code)
+        args = [cellphone, sms_code]
+        if verify_code:
+            args.append(verify_code)
         return asynctk.create_task(callback(*args))
 
     def __bind_sms_func(self, func) -> None:
         def command():
-            cellphone = self.__tl.phone_entry.get().strip()
-            verify_code = sms_img_verify_entry.get().strip() \
-                if str(sms_img_verify_entry['state']) == 'normal' else None
+            cellphone = self.__tl.cellphone_entry.get().strip()
+            verify_code = sms_verify_entry.get().strip() \
+                if str(sms_verify_entry['state']) == 'normal' else None
             need_verify = verify_code is not None
             if not cellphone:
                 self.log('请输入电话号码')
@@ -267,20 +272,27 @@ class LoginDialog:
                 fut.exception() or '验证码已发送',
                 color='blue' if fut.exception() is None else 'red',
             ))
+
         assert iscoroutinefunction(func)
-        sms_img_verify_entry = self.__tl.sms_img_verify_entry
+        sms_verify_entry = self.__tl.sms_verify_entry
         self.__tl.sms_button.configure(command=command)
 
     def __verify(self, login_type: LoginType, fetch_img):
         def refresh_callback(fut: Future):
             exception = fut.exception()
             if exception is not None:
-                print('[ERROR]:', exception)
+                logger.error(exception)
                 raise RuntimeError('unknown error')
             source = fut.result()
             self.__refresh_img(login_type, source)
 
-        asynctk.create_task(fetch_img()).add_done_callback(refresh_callback)
+        def fetch():
+            asynctk.create_task(
+                fetch_img(),
+            ).add_done_callback(refresh_callback)
+
+        fetch()
+        return fetch
 
     def reset(
         self,
@@ -292,7 +304,7 @@ class LoginDialog:
             label = (
                 tl.verify_entry,
                 None,
-                tl.sms_img_verify_entry,
+                tl.sms_verify_entry,
             )[login_type.value]
             state = 'disabled'
             if verify:
@@ -366,7 +378,8 @@ class LoginDialog:
             tl.id_entry,
             tl.password_entry,
             tl.verify_entry,
-            tl.phone_entry,
+            tl.cellphone_entry,
+            tl.sms_code_entry,
             tl.sms_verify_entry,
         ):
             entry.delete(0, 'end')

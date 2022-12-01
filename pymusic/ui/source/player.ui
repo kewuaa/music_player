@@ -574,7 +574,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Entry" id="phone_entry">
+                  <object class="ttk.Entry" id="cellphone_entry" named="True">
                     <property name="width">27</property>
                     <layout manager="grid">
                       <property name="column">1</property>
@@ -587,7 +587,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Entry" id="sms_verify_entry">
+                  <object class="ttk.Entry" id="sms_code_entry" named="True">
                     <property name="width">10</property>
                     <layout manager="grid">
                       <property name="column">1</property>
@@ -624,7 +624,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Entry" id="sms_img_verify_entry" named="True">
+                  <object class="ttk.Entry" id="sms_verify_entry" named="True">
                     <property name="state">disabled</property>
                     <property name="width">10</property>
                     <layout manager="grid">
@@ -637,7 +637,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="tk.Label" id="label8">
+                  <object class="tk.Label" id="sms_verify_label" named="True">
                     <property name="bitmap">gray12</property>
                     <property name="height">30</property>
                     <property name="width">60</property>

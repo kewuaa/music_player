@@ -13,10 +13,12 @@ from ..model import SourceModel
 from ..model import LoginConfig
 
 
+MAX_INT = 2 ** 31
+
+
 def int_overflow(val: int) -> int:
-    maxint = 2 ** 31
-    if not -maxint <= val <= maxint - 1:
-        val = (val + maxint) % (2 * maxint) - maxint
+    if not -MAX_INT <= val <= MAX_INT - 1:
+        val = (val + MAX_INT) % (2 * MAX_INT) - MAX_INT
     return val
 
 
@@ -193,6 +195,8 @@ class Source(SourceModel):
             if code != 200:
                 raise RuntimeError(
                     resp_dict.get('msg') or resp_dict['message'])
+            cookies = resp_dict['data']['cookies']
+            sess.cookie_jar.update_cookies(cookies)
             await self.save_config(login_id=login_id, password=password)
 
         verify_img_str = ''
@@ -216,15 +220,47 @@ class Source(SourceModel):
                 'verifyCode': verify_code,
                 'verifyCodeToken': verify_token,
             }
-            resp = sess.post(sms_url, params=params, data=json.dumps(data))
+            resp = await sess.post(
+                sms_url,
+                params=params,
+                data=json.dumps(data),
+            )
             resp_dict = await resp.json(content_type=None)
+            __import__('pprint').pprint(resp_dict)
             if resp_dict['code'] != 200:
                 raise RuntimeError('send sms error')
             nonlocal last_cellphone
             last_cellphone = cellphone
+            await self.save_config(cellphone=cellphone)
 
-        async def login():
-            pass
+        async def login(cellphone: str, sms_code: str, verify_code: str):
+            if not last_cellphone:
+                raise RuntimeError('it seems that you have not sended sms yet')
+            elif cellphone != last_cellphone:
+                raise RuntimeError('the cellphone is not the same as the last')
+            sess = await self._session()
+            login_url = 'https://kuwo.cn/api/www/login/loginByMobile'
+            params = {
+                'reqId': self.__get_reqid(),
+                'httpsStatus': 1,
+            }
+            data = {
+                'mobile': cellphone,
+                'smsCode': sms_code,
+                'tm': str(self._get_time_stamp()),
+                'verifyCode': verify_code,
+            }
+            resp = await sess.post(
+                login_url,
+                params=params,
+                data=json.dumps(data),
+            )
+            resp_dict = await resp.json(content_type=None)
+            __import__('pprint').pprint(resp_dict)
+            if resp_dict['code'] != 200:
+                raise RuntimeError(resp_dict['msg'])
+            cookies = resp_dict['data']['cookies']
+            sess.cookie_jar.update_cookies(cookies)
 
         async def fetch_verify_code():
             nonlocal verify_token

@@ -15,6 +15,7 @@ from pymusic.sources.model import SourceModel
 from pymusic.sources.model import SongInfo
 from pymusic.ui import PlayerApp
 from pymusic.lib.plist import PlayList
+from pymusic.lib.logger import logger
 from pymusic.lib import asynctk
 from .login import LoginDialog
 
@@ -33,12 +34,20 @@ class App(PlayerApp):
         self.mainwindow.after(300, self.__init_after)
         sources.set_stdout(partial(tk.messagebox.showinfo, 'info'))
 
+    def run(self) -> None:
+        logger.info('App launched successfully')
+        super().run()
+
     def __init_after(self) -> None:
         """初始化."""
 
+        logger.info('init attributes')
         self.__init_attr()
+        logger.info('init ui')
         self.__init_ui()
+        logger.info('binding callback function')
         self.__init_bind()
+        logger.info('rendering icons')
         asynctk.create_task(self.__init_icon())
 
     def __init_attr(self) -> None:
@@ -201,7 +210,7 @@ class App(PlayerApp):
         """init icons."""
 
         async def fit_widget(
-                widget: tk.Widget, imname: str, config: bool = True) -> None:
+                widget: tk.Widget, imname: str, render: bool = True) -> None:
             """设置图片.
 
             :param widget: 控件
@@ -217,7 +226,7 @@ class App(PlayerApp):
             resize_img = origin_img.resize(size, Image.ANTIALIAS)
             img = ImageTk.PhotoImage(resize_img)
             self.__icons[impath.stem] = img
-            if config:
+            if render:
                 widget.configure(image=img)
 
         icons_path = current_path / '../icons'

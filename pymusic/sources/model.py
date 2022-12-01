@@ -13,6 +13,7 @@ from aiohttp import ClientSession
 from aiohttp import request
 
 from pymusic.lib import aiofile
+from pymusic.lib.logger import logger
 from pymusic import settings
 from .headers import UA
 
@@ -53,8 +54,14 @@ class SourceModel:
         self._headers: Dict = UA.get(browser or 'chrome')
         self._cookies = {}
         self._cp = Path(path).parent
-        self.__config_path = settings.config_path / self._cp.name
-        self.__config_path.mkdir(parents=True, exist_ok=True)
+        self.__config_path = settings.config_path / self._cp.name / '.config'
+        self.__config_path.parent.mkdir(parents=True, exist_ok=True)
+        if self.__config_path.exists():
+            self.__config_exist = True
+            logger.info(f'detect config file in {self.__config_path}')
+        else:
+            self.__config_exist = False
+            logger.info(f'do not find config file in {self.__config_path}')
         self.__sess = asyncio.futures.Future(loop=loop)
 
         def init_sess() -> None:
@@ -102,9 +109,9 @@ class SourceModel:
     async def check_settings(self) -> Dict:
         """检查是否存在配置文件."""
 
-        config_path = self.__config_path / '.config'
+        config_path = self.__config_path
         config = {}
-        if config_path.exists():
+        if self.__config_exist:
             async with aiofile.async_open(config_path, 'r') as f:
                 for line in await f.readlines():
                     k, v = line.split('=', 1)
@@ -112,12 +119,18 @@ class SourceModel:
         return config
 
     async def save_config(self, **kwargs) -> None:
-        config_path = self.__config_path / '.config'
+        config_path = self.__config_path
         config = await self.check_settings()
-        config.update(kwargs)
-        async with aiofile.async_open(config_path, 'w', encoding='utf-8') as f:
-            for k, v in config.items():
-                await f.write(f'{k}={v}\n')
+        if kwargs:
+            config.update(kwargs)
+            async with aiofile.async_open(
+                config_path,
+                'w',
+                encoding='utf-8',
+            ) as f:
+                for k, v in config.items():
+                    await f.write(f'{k}={v}\n')
+            logger.info(f'{kwargs} has been saved to: {config_path}')
 
     def check_login(self) -> LoginConfig:
         """登录.
@@ -125,7 +138,9 @@ class SourceModel:
         返回允许的登录方式.
         """
 
-        return LoginConfig()
+        config = LoginConfig()
+        logger.info(config.message)
+        return config
 
     def _cookie_str2dict(self, cookies: str) -> Dict:
         """将cookie字符串转换为字典.
@@ -154,13 +169,14 @@ class SourceModel:
         sess: ClientSession = await self.__sess
         if not sess.closed:
             await sess.close()
+        logger.info('session closed')
 
 
 class SongInfo:
     def __init__(
         self,
         *,
-        summary: List[str],
+        summary: Sequence[str],
         _id: Sequence | str,
         _from: SourceModel,
     ) -> None:
@@ -186,13 +202,14 @@ class SongInfo:
             msg = 'vip或无版权歌曲'
         elif url == -1:
             msg = '你还没有登录\n请先登录'
-        stdout = globals().get('__stdout') or print
+        stdout = globals().get('__stdout') or logger.info
         stdout(msg)
 
     async def download(self) -> None:
         if not hasattr(self, '_path'):
             url: str = await self.url()
             if url is None:
+                logger.warning('could not get url successfully')
                 raise RuntimeError('could not get url successfully')
             suffix: str = url.split('.')[-1]
             name = self.__name + '.' + suffix
@@ -201,6 +218,7 @@ class SongInfo:
                 data = await res.read()
                 async with aiofile.async_open(path, 'wb') as f:
                     await f.write(data)
+        logger.info(f'{self.__name} already in {self._path}')
 
     def check_download(self) -> Path | None:
         if not hasattr(self, '_path'):

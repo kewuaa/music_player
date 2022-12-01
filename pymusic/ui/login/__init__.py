@@ -81,18 +81,18 @@ class LoginToplevel(tk.Toplevel):
         self.label7 = ttk.Label(self.frame4)
         self.label7.configure(text='短信验证码')
         self.label7.grid(column=0, ipadx=3, ipady=3, padx=20, pady=9, row=1)
-        self.phone_entry = ttk.Entry(self.frame4)
-        self.phone_entry.configure(width=27)
-        self.phone_entry.grid(
+        self.cellphone_entry = ttk.Entry(self.frame4)
+        self.cellphone_entry.configure(width=27)
+        self.cellphone_entry.grid(
             column=1,
             columnspan=4,
             ipadx=3,
             ipady=3,
             row=0,
             sticky="w")
-        self.sms_verify_entry = ttk.Entry(self.frame4)
-        self.sms_verify_entry.configure(width=10)
-        self.sms_verify_entry.grid(
+        self.sms_code_entry = ttk.Entry(self.frame4)
+        self.sms_code_entry.configure(width=10)
+        self.sms_code_entry.grid(
             column=1,
             columnspan=2,
             ipadx=3,
@@ -106,13 +106,13 @@ class LoginToplevel(tk.Toplevel):
         self.label2 = ttk.Label(self.frame4)
         self.label2.configure(text='图片验证码')
         self.label2.grid(column=0, ipadx=3, ipady=3, padx=20, pady=9, row=2)
-        self.sms_img_verify_entry = ttk.Entry(self.frame4)
-        self.sms_img_verify_entry.configure(state="disabled", width=10)
-        self.sms_img_verify_entry.grid(
+        self.sms_verify_entry = ttk.Entry(self.frame4)
+        self.sms_verify_entry.configure(state="disabled", width=10)
+        self.sms_verify_entry.grid(
             column=1, ipadx=3, ipady=3, row=2, sticky="w")
-        self.label8 = tk.Label(self.frame4)
-        self.label8.configure(bitmap="gray12", height=30, width=60)
-        self.label8.grid(column=3, row=2)
+        self.sms_verify_label = tk.Label(self.frame4)
+        self.sms_verify_label.configure(bitmap="gray12", height=30, width=60)
+        self.sms_verify_label.grid(column=3, row=2)
         self.frame4.pack(side="top")
         self.notebook.add(self.frame4, text='短信验证登录')
         self.notebook.grid(column=0, columnspan=5, row=0)

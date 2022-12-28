@@ -216,7 +216,7 @@ class Source(SourceModel):
             }
             data = {
                 'mobile': cellphone,
-                'userIp': 'kuwo.cn',
+                'userIp': 'www.kuwo.cn',
                 'verifyCode': verify_code,
                 'verifyCodeToken': verify_token,
             }
@@ -229,7 +229,8 @@ class Source(SourceModel):
             __import__('pprint').pprint(resp_dict)
             if resp_dict['code'] != 200:
                 raise RuntimeError('send sms error')
-            nonlocal last_cellphone
+            nonlocal last_cellphone, tm
+            tm = resp_dict['data']['tm']
             last_cellphone = cellphone
             await self.save_config(cellphone=cellphone)
 
@@ -247,7 +248,7 @@ class Source(SourceModel):
             data = {
                 'mobile': cellphone,
                 'smsCode': sms_code,
-                'tm': str(self._get_time_stamp()),
+                'tm': tm,
                 'verifyCode': verify_code,
             }
             resp = await sess.post(
@@ -256,7 +257,6 @@ class Source(SourceModel):
                 data=json.dumps(data),
             )
             resp_dict = await resp.json(content_type=None)
-            __import__('pprint').pprint(resp_dict)
             if resp_dict['code'] != 200:
                 raise RuntimeError(resp_dict['msg'])
             cookies = resp_dict['data']['cookies']
@@ -268,6 +268,7 @@ class Source(SourceModel):
                 await self.__fetch_verify_code()
             return verify_img
 
+        tm = 0000000000
         last_cellphone = ''
         verify_token = ''
         return send_sms, login, fetch_verify_code

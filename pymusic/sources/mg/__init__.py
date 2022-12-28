@@ -30,7 +30,7 @@ class Source(SourceModel):
         self,
         loop: asyncio.base_events.BaseEventLoop,
         *,
-        browser: str | None = None,
+        browser: str = None,
     ) -> None:
         super().__init__(loop, path=__file__, browser=browser)
         self._headers['Referer'] = 'https://music.migu.cn/v3'

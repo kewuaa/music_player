@@ -1,6 +1,7 @@
 from typing import Callable
 from typing import Sequence
 from typing import Tuple
+from typing import Union
 from typing import Dict
 from typing import List
 from http.cookies import SimpleCookie
@@ -30,9 +31,9 @@ def set_stdout(stdout: Callable[[str], None]) -> None:
 class LoginConfig:
     message: str = 'The login function is not completed yet'
     check_id: bool = True
-    PWD_callback: Tuple[Callable] | None = None
-    QR_callback: Tuple[Callable] | None = None
-    SMS_callback: Tuple[Callable] | None = None
+    PWD_callback: Union[Tuple[Callable], None] = None
+    QR_callback: Union[Tuple[Callable], None] = None
+    SMS_callback: Union[Callable, None] = None
 
     def __post_init__(self) -> None:
         self.enabled = True \
@@ -48,7 +49,7 @@ class SourceModel:
         loop: asyncio.base_events.BaseEventLoop,
         *,
         path: str,
-        browser: str | None = None,
+        browser: Union[str, None] = None,
     ) -> None:
         self._loop = loop
         self._headers: Dict = UA.get(browser or 'chrome')
@@ -177,7 +178,7 @@ class SongInfo:
         self,
         *,
         summary: Sequence[str],
-        _id: Sequence | str,
+        _id: Union[Sequence, str],
         _from: SourceModel,
     ) -> None:
         self.__summary = summary
@@ -220,7 +221,7 @@ class SongInfo:
                     await f.write(data)
         logger.info(f'{self.__name} already in {self._path}')
 
-    def check_download(self) -> Path | None:
+    def check_download(self) -> Union[Path, None]:
         if not hasattr(self, '_path'):
             files = list(self.__base_path.glob(self.__name + '.*'))
             if not files:

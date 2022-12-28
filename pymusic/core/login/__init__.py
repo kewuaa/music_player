@@ -188,7 +188,7 @@ class LoginDialog:
         self,
         check_id: bool,
         callback,
-    ) -> Future | None:
+    ) -> Future:
         tl = self.__tl
         login_id = tl.id_entry.get().strip()
         password = tl.password_entry.get()
@@ -220,7 +220,7 @@ class LoginDialog:
         tl.password_entry.insert(0, config.get('password', ''))
         tl.cellphone_entry.insert(0, config.get('cellphone', ''))
 
-    def __SMS_callback(self, callback) -> Future | None:
+    def __SMS_callback(self, callback) -> Future:
         tl = self.__tl
         cellphone = tl.cellphone_entry.get().strip()
         sms_code = tl.sms_code_entry.get().strip()

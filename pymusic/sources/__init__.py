@@ -23,8 +23,7 @@ SOURCE_OPTIONS = {
     'kw': '酷我',
     'mg': '咪咕',
     # 'qq': 'QQ',
-    # 'qqjt': '千千静听',
+    'qqjt': '千千静听',
     'wyy': '网易云',
 }
 sources = {}
-

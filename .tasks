@@ -1,0 +1,3 @@
+[gen-ui]
+command=<root>/.venv/Scripts/pyside6-rcc -o ./src/music_player/ui/icons_rc.py ./src/music_player/ui/icons.qrc && <root>/.venv/Scripts/pyside6-uic -o ./src/music_player/ui/main_ui.py --from-imports ./src/music_player/ui/main.ui
+cwd=<root>

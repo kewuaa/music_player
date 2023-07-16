@@ -1,18 +1,19 @@
-import json
-import base64
 import asyncio
-from typing import Optional, Awaitable, Callable
-from urllib.parse import quote
+import base64
+import json
 from hashlib import sha1
 from re import compile
+from typing import Any, Awaitable, Callable, Optional, Coroutine
+from urllib.parse import quote
 
 import aiohttp
 from lxml.html import fromstring
 
 from .._template import Template
-from ..lib.RSA import RSA
 from ..lib.AES import encrypt
+from ..lib.RSA import RSA
 from ..utils import get_time_stamp
+
 cookie_id = "8ad12619-c027-452a-b229-70bb4efb4637-n41688289353375"
 fingerPrint = (
     "365f397d7a702e0ba61a0c81be7447500c0568561479bcb3da6ba896070cc336f6e8e3d505"
@@ -104,8 +105,10 @@ class API(Template):
         url = "https://music.migu.cn/v3"
         res = await sess.get(url)
         page = await res.text()
-        info = compile("var MUSIC_CONFIG.*?{([\S\s]+?)}").\
-            search(page).group(1)
+        info = compile(r"var MUSIC_CONFIG.*?{([\S\s]+?)}").search(page)
+        if info is None:
+            raise RuntimeError("parse app information failed")
+        info = info.group(1)
         return {
             k.strip(): v.strip().strip("'").strip('"')
             for k, v in [
@@ -162,7 +165,7 @@ class API(Template):
             desc = [info_dict['title'], info_dict['singer']]
             if info_dict.get('album') is not None:
                 desc.append(info_dict['album'])
-            img_url = info_dict["imgUrl"]
+            img_url = "https:" + info_dict["imgUrl"]
             source_id = info_dict['linkUrl'].split('/')[-1]
             return Template.SongInfo(
                 desc=" -> ".join(desc),
@@ -233,6 +236,8 @@ class API(Template):
         song_url = res['data']['playUrl']
         if song_url:
             return Template.Song(url="https:" + song_url)
+        else:
+            return Template.Song(status=Template.Song.Status.NeedVIP)
 
     async def _fetch_captcha(self) -> bytes:
         """ fetch captcha.
@@ -325,7 +330,7 @@ class API(Template):
 
     async def _login_by_qrcode(
         self,
-        qrcode_handle: Callable[bytes, Awaitable[None]]
+        qrcode_handle: Callable[[bytes], Coroutine[Any, Any, None]]
     ) -> None:
         """ log in by qr code.
 

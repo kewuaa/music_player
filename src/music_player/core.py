@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from typing import Any, Callable, Coroutine, Optional
+from typing import Optional
 from PySide6.QtCore import QBuffer, QIODeviceBase, QSize
 
 from aiohttp import request

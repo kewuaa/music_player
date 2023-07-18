@@ -21,19 +21,7 @@ from qasync import QEventLoop, asyncClose, asyncSlot
 
 from .ui.main_ui import Ui_App
 
-apis = (kg, kw, mg, qianqian, wyy,)
-
-
-def to_sync(
-    fn: Callable[[Any], Coroutine[Any, Any, Any]],
-) -> Callable:
-    """ async Slot."""
-
-    def inter(*args, **kwargs) -> Any:
-        loop = asyncio.get_event_loop()
-        return loop.create_task(fn(*args, **kwargs))
-    inter.__name__ = fn.__name__
-    return (inter)
+apis = (wyy, kw, mg, kg, qianqian)
 
 
 class APIDict(dict):

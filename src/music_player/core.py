@@ -12,14 +12,13 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QHBoxLayout,
-    QLabel,
-    QRadioButton,
     QStyleFactory,
     QWidget,
 )
 from qasync import QEventLoop, asyncClose, asyncSlot
 
 from .ui.main_ui import Ui_App
+from .lib.qt_components import SongLable
 
 apis = (wyy, kw, mg, kg, qianqian)
 
@@ -94,7 +93,7 @@ class App(QWidget, Ui_App):
         async def create_item(song_info: Template.SongInfo) -> QWidget:
             widget = QWidget()
             button = QCheckBox("")
-            label = QLabel(song_info.desc)
+            label = SongLable(song_info)
             if song_info.img_url:
                 async with request("GET", song_info.img_url) as res:
                     data = await res.read()

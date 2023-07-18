@@ -36,15 +36,16 @@ class APIDict(dict):
 class App(QWidget, Ui_App):
     """ Application."""
 
-    def __init__(self, loop: QEventLoop, parent: Optional[QWidget] = None) -> None:
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
         """ initialize.
 
-        :param loop: qasync event loop
         :parent parent: parent widget
         """
 
+        self._qt_app = QApplication(sys.argv)
+        self._qt_app.setStyle(QStyleFactory.create("Fusion"))
+        self._loop = QEventLoop(self._qt_app)
         super().__init__(parent)
-        self._loop = loop
         self._apis: dict[str, Template] = APIDict()
         self._player = QMediaPlayer(self)
         self._loop.call_soon(self.setupUi)
@@ -65,11 +66,8 @@ class App(QWidget, Ui_App):
         """ run Application."""
 
         async def _run() -> None:
-            app = QApplication.instance()
-            if app is None:
-                raise RuntimeError("no application instance")
             fut = self._loop.create_future()
-            app.aboutToQuit.connect(
+            self._qt_app.aboutToQuit.connect(
                 lambda: (
                     self.deinit(),
                     fut.cancel()
@@ -132,7 +130,4 @@ class App(QWidget, Ui_App):
 def run() -> None:
     """ run an application."""
 
-    qt_app = QApplication(sys.argv)
-    qt_app.setStyle(QStyleFactory.create("Fusion"))
-    loop = QEventLoop(qt_app)
-    App(loop).run()
+    App().run()

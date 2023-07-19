@@ -11,6 +11,8 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QHBoxLayout,
+    QSizePolicy,
+    QSpacerItem,
     QStyleFactory,
     QWidget,
 )
@@ -116,6 +118,12 @@ class App(QWidget, Ui_App):
             hbox = QHBoxLayout(widget)
             hbox.addWidget(button)
             hbox.addWidget(label)
+            hbox.addSpacerItem(QSpacerItem(
+                40,
+                20,
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Minimum
+            ))
             return widget
 
         name = self.api_comboBox.currentText()

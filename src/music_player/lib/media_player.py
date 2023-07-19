@@ -1,6 +1,6 @@
 from enum import IntEnum
 from threading import Lock
-from typing import Callable, Optional
+from typing import Optional
 
 from PySide6.QtCore import QSize, QUrl
 from PySide6.QtGui import QIcon
@@ -115,21 +115,33 @@ class Player:
             progress_slider.setEnabled(False)
             progress_label.setText("00 / 00")
 
+        def format_song_length(length: int) -> str:
+            seconds = length / 1000
+            minitus = int(seconds // 60)
+            return f"{minitus:0>2}:{int(seconds - minitus * 60):0>2}"
+
         def set_progress_length(length: int) -> None:
+            nonlocal song_length
             if length > 0:
+                song_length = format_song_length(length)
                 progress_slider.setEnabled(True)
                 progress_slider.setRange(0, length)
-                progress_label.setText(f"{length}")
+                progress_label.setText(f"00 / {song_length}")
             else:
                 progress_label.setText("00 / 00")
 
+        def set_slider_position(pos: int) -> None:
+            progress_slider.setSliderPosition(pos)
+            progress_label.setText(f"{format_song_length(pos)} / {song_length}")
+
+        song_length = 0
         previous.clicked.connect(previous_song)
         self._player.playingChanged.connect(toggle_icon)
         toggle.clicked.connect(toggle_play_state)
         next.clicked.connect(next_song)
         stop.clicked.connect(stop_play)
         self._player.durationChanged.connect(set_progress_length)
-        self._player.positionChanged.connect(progress_slider.setSliderPosition)
+        self._player.positionChanged.connect(set_slider_position)
         progress_slider.sliderMoved.connect(self._player.setPosition)
 
     def set_volume(self, volume: int) -> None:

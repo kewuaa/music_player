@@ -7,7 +7,6 @@ from aiohttp import request
 from music_api import kg, kw, mg, qianqian, wyy
 from music_api._template import Template
 from PySide6.QtGui import QPixmap
-from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -19,6 +18,7 @@ from qasync import QEventLoop, asyncClose, asyncSlot
 
 from .ui.main_ui import Ui_App
 from .lib.qt_components import SongLable
+from .lib.media_player import Player
 
 apis = (wyy, kw, mg, kg, qianqian)
 
@@ -46,7 +46,7 @@ class App(QWidget, Ui_App):
         self._loop = QEventLoop(self._qt_app)
         super().__init__(parent)
         self._apis: dict[str, Template] = APIDict()
-        self._player = QMediaPlayer(self)
+        self._player = Player(self)
         self._loop.call_soon(self.setupUi)
 
     def setupUi(self) -> None:
@@ -54,6 +54,14 @@ class App(QWidget, Ui_App):
 
         super().setupUi(self)
         self.api_comboBox.addItems([api.name for api in apis])
+        self._player.connect_to_widgets(
+            self.previous_song_pushButton,
+            self.toggle_play_state_pushButton,
+            self.next_song_pushButton,
+            self.stop_play_pushButton,
+            self.progress_Slider,
+            self.progress_label
+        )
 
     def deinit(self) -> None:
         """ destructor."""

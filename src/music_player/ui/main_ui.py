@@ -38,6 +38,9 @@ class Ui_App(object):
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.home_pushButton = QPushButton(self.widget)
         self.home_pushButton.setObjectName(u"home_pushButton")
+        icon1 = QIcon()
+        icon1.addFile(u":/pic/icons/home.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.home_pushButton.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.home_pushButton)
 
@@ -57,6 +60,9 @@ class Ui_App(object):
 
         self.search_pushButton = QPushButton(self.widget)
         self.search_pushButton.setObjectName(u"search_pushButton")
+        icon2 = QIcon()
+        icon2.addFile(u":/pic/icons/search.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.search_pushButton.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.search_pushButton)
 
@@ -104,19 +110,20 @@ class Ui_App(object):
         self.widget_3.setMinimumSize(QSize(631, 80))
         self.gridLayout_2 = QGridLayout(self.widget_3)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.horizontalSlider = QSlider(self.widget_3)
-        self.horizontalSlider.setObjectName(u"horizontalSlider")
-        self.horizontalSlider.setMinimumSize(QSize(531, 18))
-        self.horizontalSlider.setOrientation(Qt.Horizontal)
+        self.progress_Slider = QSlider(self.widget_3)
+        self.progress_Slider.setObjectName(u"progress_Slider")
+        self.progress_Slider.setEnabled(False)
+        self.progress_Slider.setMinimumSize(QSize(531, 18))
+        self.progress_Slider.setOrientation(Qt.Horizontal)
 
-        self.gridLayout_2.addWidget(self.horizontalSlider, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.progress_Slider, 0, 0, 1, 1)
 
-        self.label = QLabel(self.widget_3)
-        self.label.setObjectName(u"label")
-        self.label.setMinimumSize(QSize(54, 16))
-        self.label.setAlignment(Qt.AlignCenter)
+        self.progress_label = QLabel(self.widget_3)
+        self.progress_label.setObjectName(u"progress_label")
+        self.progress_label.setMinimumSize(QSize(54, 16))
+        self.progress_label.setAlignment(Qt.AlignCenter)
 
-        self.gridLayout_2.addWidget(self.label, 0, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.progress_label, 0, 1, 1, 1)
 
         self.widget_5 = QWidget(self.widget_3)
         self.widget_5.setObjectName(u"widget_5")
@@ -127,29 +134,37 @@ class Ui_App(object):
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_3)
 
-        self.pushButton_3 = QPushButton(self.widget_5)
-        self.pushButton_3.setObjectName(u"pushButton_3")
-        icon1 = QIcon()
-        icon1.addFile(u":/pic/icons/previous.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.pushButton_3.setIcon(icon1)
-
-        self.horizontalLayout_2.addWidget(self.pushButton_3)
-
-        self.pushButton_4 = QPushButton(self.widget_5)
-        self.pushButton_4.setObjectName(u"pushButton_4")
-        icon2 = QIcon()
-        icon2.addFile(u":/pic/icons/play.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.pushButton_4.setIcon(icon2)
-
-        self.horizontalLayout_2.addWidget(self.pushButton_4)
-
-        self.pushButton_5 = QPushButton(self.widget_5)
-        self.pushButton_5.setObjectName(u"pushButton_5")
+        self.previous_song_pushButton = QPushButton(self.widget_5)
+        self.previous_song_pushButton.setObjectName(u"previous_song_pushButton")
         icon3 = QIcon()
-        icon3.addFile(u":/pic/icons/next.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.pushButton_5.setIcon(icon3)
+        icon3.addFile(u":/pic/icons/previous.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.previous_song_pushButton.setIcon(icon3)
 
-        self.horizontalLayout_2.addWidget(self.pushButton_5)
+        self.horizontalLayout_2.addWidget(self.previous_song_pushButton)
+
+        self.toggle_play_state_pushButton = QPushButton(self.widget_5)
+        self.toggle_play_state_pushButton.setObjectName(u"toggle_play_state_pushButton")
+        icon4 = QIcon()
+        icon4.addFile(u":/pic/icons/play.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.toggle_play_state_pushButton.setIcon(icon4)
+
+        self.horizontalLayout_2.addWidget(self.toggle_play_state_pushButton)
+
+        self.next_song_pushButton = QPushButton(self.widget_5)
+        self.next_song_pushButton.setObjectName(u"next_song_pushButton")
+        icon5 = QIcon()
+        icon5.addFile(u":/pic/icons/next.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.next_song_pushButton.setIcon(icon5)
+
+        self.horizontalLayout_2.addWidget(self.next_song_pushButton)
+
+        self.stop_play_pushButton = QPushButton(self.widget_5)
+        self.stop_play_pushButton.setObjectName(u"stop_play_pushButton")
+        icon6 = QIcon()
+        icon6.addFile(u":/pic/icons/stop.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.stop_play_pushButton.setIcon(icon6)
+
+        self.horizontalLayout_2.addWidget(self.stop_play_pushButton)
 
         self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
@@ -169,11 +184,12 @@ class Ui_App(object):
 
     def retranslateUi(self, App):
         App.setWindowTitle(QCoreApplication.translate("App", u"music_player", None))
-        self.home_pushButton.setText(QCoreApplication.translate("App", u"home", None))
-        self.search_pushButton.setText(QCoreApplication.translate("App", u"\u641c\u7d22", None))
-        self.label.setText(QCoreApplication.translate("App", u"00 / 00", None))
-        self.pushButton_3.setText("")
-        self.pushButton_4.setText("")
-        self.pushButton_5.setText("")
+        self.home_pushButton.setText("")
+        self.search_pushButton.setText("")
+        self.progress_label.setText(QCoreApplication.translate("App", u"00 / 00", None))
+        self.previous_song_pushButton.setText("")
+        self.toggle_play_state_pushButton.setText("")
+        self.next_song_pushButton.setText("")
+        self.stop_play_pushButton.setText("")
     # retranslateUi
 

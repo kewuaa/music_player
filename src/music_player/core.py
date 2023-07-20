@@ -21,6 +21,7 @@ from qasync import QEventLoop, asyncClose, asyncSlot
 from .ui.main_ui import Ui_App
 from .lib.qt_components import SongLable
 from .lib.media_player import Player
+from .utils import load_icon
 
 apis = (wyy, kw, mg, kg, qianqian)
 
@@ -49,27 +50,105 @@ class App(QWidget, Ui_App):
         super().__init__(parent)
         self._apis: dict[str, Template] = APIDict()
         self._player = Player(self)
-        self._loop.call_soon(self.setupUi)
+        self._loop.call_soon(
+            lambda: (
+                self.setupUi(),
+                self.connect_to_media_player(),
+            )
+        )
 
     def setupUi(self) -> None:
         """ setup Ui."""
 
         super().setupUi(self)
         self.api_comboBox.addItems([api.name for api in apis])
-        self._player.connect_to_widgets(
-            self.previous_song_pushButton,
-            self.toggle_play_state_pushButton,
-            self.next_song_pushButton,
-            self.stop_play_pushButton,
-            self.progress_Slider,
-            self.progress_label
-        )
 
     def deinit(self) -> None:
         """ destructor."""
 
         for api in self._apis.values():
             asyncClose(api.deinit)()
+
+    def connect_to_media_player(self) -> None:
+        """ connect to media player."""
+
+        song_length = 0
+        play_icon = load_icon(u":pic/icons/play.png")
+        pause_icon = load_icon(u":pic/icons/pause.png")
+        sound_on_icon = load_icon(u":pic/icons/sound_on.png")
+        sound_off_icon = load_icon(u":pic/icons/sound_off.png")
+
+        def toggle_play_icon() -> None:
+            if self._player.is_playing():
+                self.toggle_play_state_pushButton.setToolTip("<b>播放</b>")
+                self.toggle_play_state_pushButton.setIcon(play_icon)
+            else:
+                self.toggle_play_state_pushButton.setToolTip("<b>暂停</b>")
+                self.toggle_play_state_pushButton.setIcon(pause_icon)
+
+        def toggle_play_state() -> None:
+            if not self._player.has_source():
+                return
+            if self._player.is_playing():
+                self._player.pause()
+            else:
+                self._player.play()
+
+        def stop_play() -> None:
+            self._player.stop()
+            self.progress_Slider.setEnabled(False)
+            self.progress_label.setText("00 / 00")
+
+        def format_song_length(length: int) -> str:
+            seconds = length / 1000
+            minitus = int(seconds // 60)
+            return f"{minitus:0>2}:{int(seconds - minitus * 60):0>2}"
+
+        def set_progress_length(length: int) -> None:
+            nonlocal song_length
+            if length > 0:
+                song_length = format_song_length(length)
+                self.progress_Slider.setEnabled(True)
+                self.progress_Slider.setRange(0, length)
+                self.progress_label.setText(f"00 / {song_length}")
+            else:
+                self.progress_label.setText("00 / 00")
+
+        def set_progress_slider_position(pos: int) -> None:
+            self.progress_Slider.setSliderPosition(pos)
+            self.progress_label.setText(f"{format_song_length(pos)} / {song_length}")
+
+        def toggle_muted_icon() -> None:
+            if self._player.is_muted():
+                self.volume_pushButton.setToolTip("<b>已静音</b>")
+                self.volume_pushButton.setIcon(sound_off_icon)
+                self.volume_Slider.setEnabled(False)
+            else:
+                self.volume_pushButton.setToolTip("<b>音量</b>")
+                self.volume_pushButton.setIcon(sound_on_icon)
+                self.volume_Slider.setEnabled(True)
+
+        def toggle_muted() -> None:
+            is_not_muted = not self._player.is_muted()
+            self._player.set_muted(is_not_muted)
+
+        def set_volume(volume: int) -> None:
+            self.volume_Slider.setToolTip(f"<b>{volume}</b>")
+            self._player.set_volume(volume)
+
+        self.previous_song_pushButton.clicked.connect(self._player.previous)
+        self._player.playingChanged.connect(toggle_play_icon)
+        self.toggle_play_state_pushButton.clicked.connect(toggle_play_state)
+        self.next_song_pushButton.clicked.connect(self._player.next)
+        self.stop_play_pushButton.clicked.connect(stop_play)
+        self._player.durationChanged.connect(set_progress_length)
+        self._player.positionChanged.connect(set_progress_slider_position)
+        self.progress_Slider.sliderMoved.connect(self._player.set_position)
+        self._player.mutedChanged.connect(toggle_muted_icon)
+        self.volume_pushButton.clicked.connect(toggle_muted)
+        self.volume_Slider.valueChanged.connect(set_volume)
+
+        self.volume_Slider.setSliderPosition(50)
 
     def run(self) -> None:
         """ run Application."""

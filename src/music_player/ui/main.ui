@@ -29,6 +29,9 @@
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QPushButton" name="home_pushButton">
+        <property name="toolTip">
+         <string>&lt;b&gt;返回主页&lt;/b&gt;</string>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -52,13 +55,20 @@
        </spacer>
       </item>
       <item>
-       <widget class="QComboBox" name="api_comboBox"/>
+       <widget class="QComboBox" name="api_comboBox">
+        <property name="toolTip">
+         <string>&lt;b&gt;选择API&lt;/b&gt;</string>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QLineEdit" name="search_lineEdit"/>
       </item>
       <item>
        <widget class="QPushButton" name="search_pushButton">
+        <property name="toolTip">
+         <string>&lt;b&gt;搜索&lt;b/&gt;</string>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -196,6 +206,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="previous_song_pushButton">
+           <property name="toolTip">
+            <string>&lt;b&gt;上一曲&lt;/b&gt;</string>
+           </property>
            <property name="text">
             <string/>
            </property>
@@ -207,6 +220,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="toggle_play_state_pushButton">
+           <property name="toolTip">
+            <string>&lt;b&gt;播放&lt;b/&gt;</string>
+           </property>
            <property name="text">
             <string/>
            </property>
@@ -218,6 +234,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="next_song_pushButton">
+           <property name="toolTip">
+            <string>&lt;b&gt;下一曲&lt;b/&gt;</string>
+           </property>
            <property name="text">
             <string/>
            </property>
@@ -235,6 +254,36 @@
            <property name="icon">
             <iconset resource="icons.qrc">
              <normaloff>:/pic/icons/stop.png</normaloff>:/pic/icons/stop.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="volume_pushButton">
+           <property name="toolTip">
+            <string>&lt;b&gt;音量&lt;/b&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="icons.qrc">
+             <normaloff>:/pic/icons/sound_on.png</normaloff>:/pic/icons/sound_on.png</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSlider" name="volume_Slider">
+           <property name="maximum">
+            <number>100</number>
+           </property>
+           <property name="pageStep">
+            <number>10</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="tickPosition">
+            <enum>QSlider::NoTicks</enum>
            </property>
           </widget>
          </item>

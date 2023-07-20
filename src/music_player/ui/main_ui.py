@@ -166,6 +166,23 @@ class Ui_App(object):
 
         self.horizontalLayout_2.addWidget(self.stop_play_pushButton)
 
+        self.volume_pushButton = QPushButton(self.widget_5)
+        self.volume_pushButton.setObjectName(u"volume_pushButton")
+        icon7 = QIcon()
+        icon7.addFile(u":/pic/icons/sound_on.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.volume_pushButton.setIcon(icon7)
+
+        self.horizontalLayout_2.addWidget(self.volume_pushButton)
+
+        self.volume_Slider = QSlider(self.widget_5)
+        self.volume_Slider.setObjectName(u"volume_Slider")
+        self.volume_Slider.setMaximum(100)
+        self.volume_Slider.setPageStep(10)
+        self.volume_Slider.setOrientation(Qt.Horizontal)
+        self.volume_Slider.setTickPosition(QSlider.NoTicks)
+
+        self.horizontalLayout_2.addWidget(self.volume_Slider)
+
         self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_4)
@@ -184,12 +201,34 @@ class Ui_App(object):
 
     def retranslateUi(self, App):
         App.setWindowTitle(QCoreApplication.translate("App", u"music_player", None))
+#if QT_CONFIG(tooltip)
+        self.home_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u8fd4\u56de\u4e3b\u9875</b>", None))
+#endif // QT_CONFIG(tooltip)
         self.home_pushButton.setText("")
+#if QT_CONFIG(tooltip)
+        self.api_comboBox.setToolTip(QCoreApplication.translate("App", u"<b>\u9009\u62e9API</b>", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.search_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u641c\u7d22<b/>", None))
+#endif // QT_CONFIG(tooltip)
         self.search_pushButton.setText("")
         self.progress_label.setText(QCoreApplication.translate("App", u"00 / 00", None))
+#if QT_CONFIG(tooltip)
+        self.previous_song_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u4e0a\u4e00\u66f2</b>", None))
+#endif // QT_CONFIG(tooltip)
         self.previous_song_pushButton.setText("")
+#if QT_CONFIG(tooltip)
+        self.toggle_play_state_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u64ad\u653e<b/>", None))
+#endif // QT_CONFIG(tooltip)
         self.toggle_play_state_pushButton.setText("")
+#if QT_CONFIG(tooltip)
+        self.next_song_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u4e0b\u4e00\u66f2<b/>", None))
+#endif // QT_CONFIG(tooltip)
         self.next_song_pushButton.setText("")
         self.stop_play_pushButton.setText("")
+#if QT_CONFIG(tooltip)
+        self.volume_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u97f3\u91cf</b>", None))
+#endif // QT_CONFIG(tooltip)
+        self.volume_pushButton.setText("")
     # retranslateUi
 

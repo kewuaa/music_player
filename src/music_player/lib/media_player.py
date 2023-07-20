@@ -2,11 +2,10 @@ from enum import IntEnum
 from threading import Lock
 from typing import Optional
 
-from PySide6.QtCore import QSize, QUrl
-from PySide6.QtGui import QIcon
-from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
-from PySide6.QtWidgets import QLabel, QPushButton, QSlider, QWidget
 from music_api import Template
+from PySide6.QtCore import QUrl, Signal
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtWidgets import QWidget
 
 
 class PlayMode(IntEnum):
@@ -44,113 +43,75 @@ class Player:
             return
         with self.__lock:
             self._audio_output = QAudioOutput()
-            self._audio_output.setVolume(50)
             self._player = QMediaPlayer(parent)
             self._player.setAudioOutput(self._audio_output)
             self._play_mode: Optional[PlayMode] = None
             self._play_list: list[Template.Song] = []
             self._play_index = 0
-            self._current_media: Optional[Template.Song] = None
+            self._current_song: Optional[Template.Song] = None
 
-            self._play_icon = QIcon()
-            self._play_icon.addFile(
-                u":pic/icons/play.png",
-                QSize(),
-                QIcon.Mode.Normal,
-                QIcon.State.Off,
-            )
-            self._pause_icon = QIcon()
-            self._pause_icon.addFile(
-                u":pic/icons/pause.png",
-                QSize(),
-                QIcon.Mode.Normal,
-                QIcon.State.Off,
-            )
+            self.playingChanged = self._player.playingChanged
+            self.durationChanged = self._player.durationChanged
+            self.positionChanged = self._player.positionChanged
+            self.mutedChanged = self._audio_output.mutedChanged
+            self.listChanged = Signal()
 
             self.__initialzed = True
 
-    def connect_to_widgets(
-        self,
-        previous: QPushButton,
-        toggle: QPushButton,
-        next: QPushButton,
-        stop: QPushButton,
-        progress_slider: QSlider,
-        progress_label: QLabel,
-    ) -> None:
-        """ connect to widgets.
+    def is_playing(self) -> bool:
+        """ if media player is playing."""
 
-        :param previous: previous song button
-        :param toggle: toggle play state button
-        :param next: next song button
-        :param stop: stop song button
-        :progress_slider: progress slider
-        :progress_label: progress label
-        """
+        return self._player.isPlaying()
 
-        def previous_song() -> None:
-            if self._play_mode is None:
-                return
+    def previous(self) -> None:
+        """ previous song."""
 
-        def toggle_icon() -> None:
-            if self._player.isPlaying():
-                toggle.setIcon(self._play_icon)
-            else:
-                toggle.setIcon(self._pause_icon)
+        if self._play_mode is None:
+            return
 
-        def toggle_play_state() -> None:
-            if self._current_media is None:
-                return
-            if self._player.isPlaying():
-                self._player.pause()
-            else:
-                self._player.play()
+    def next(self) -> None:
+        """ next song."""
 
-        def next_song() -> None:
-            if self._play_mode is None:
-                return
+        if self._play_mode is None:
+            return
 
-        def stop_play() -> None:
-            self._player.stop()
-            progress_slider.setEnabled(False)
-            progress_label.setText("00 / 00")
+    def play(self) -> None:
+        """ start to playing."""
 
-        def format_song_length(length: int) -> str:
-            seconds = length / 1000
-            minitus = int(seconds // 60)
-            return f"{minitus:0>2}:{int(seconds - minitus * 60):0>2}"
+        self._player.play()
 
-        def set_progress_length(length: int) -> None:
-            nonlocal song_length
-            if length > 0:
-                song_length = format_song_length(length)
-                progress_slider.setEnabled(True)
-                progress_slider.setRange(0, length)
-                progress_label.setText(f"00 / {song_length}")
-            else:
-                progress_label.setText("00 / 00")
+    def pause(self) -> None:
+        """ stop playing."""
 
-        def set_slider_position(pos: int) -> None:
-            progress_slider.setSliderPosition(pos)
-            progress_label.setText(f"{format_song_length(pos)} / {song_length}")
+        self._player.pause()
 
-        song_length = 0
-        previous.clicked.connect(previous_song)
-        self._player.playingChanged.connect(toggle_icon)
-        toggle.clicked.connect(toggle_play_state)
-        next.clicked.connect(next_song)
-        stop.clicked.connect(stop_play)
-        self._player.durationChanged.connect(set_progress_length)
-        self._player.positionChanged.connect(set_slider_position)
-        progress_slider.sliderMoved.connect(self._player.setPosition)
+    def stop(self) -> None:
+        self._player.stop()
+
+    def set_position(self, pos: int) -> None:
+        """ set the position for media player."""
+
+        self._player.setPosition(pos)
+
+    def has_source(self) -> bool:
+        """ if the player has source."""
+
+        return self._current_song is not None
+
+    def is_muted(self) -> bool:
+        """ if the media player is muted."""
+
+        return self._audio_output.isMuted()
+
+    def set_muted(self, muted: bool) -> None:
+        """ mute media player."""
+
+        self._audio_output.setMuted(muted)
 
     def set_volume(self, volume: int) -> None:
-        """ set volume.
+        """ set volume."""
 
-        :param volume: volume value
-        """
-
-        self._audio_output.setVolume(volume)
+        self._audio_output.setVolume(volume / 100)
 
     def set_mode(self, mode: Optional[PlayMode]) -> None:
         """ set play mode.
@@ -172,9 +133,19 @@ class Player:
             source = QUrl(url)
         else:
             source = QUrl.fromLocalFile(url)
-        self._current_media = song
+        self._current_song = song
         self._player.setSource(source)
         self._player.play()
+
+    def play_song_at(self, index: int) -> None:
+        """ play song at list.
+
+        :param index: index of song
+        """
+
+        song = self._play_list[index]
+        self._play_index = index
+        self.play_song(song)
 
     def extend_play_list(self, *songs: Template.Song) -> None:
         """ extend songs to play list.
@@ -183,3 +154,4 @@ class Player:
         """
 
         self._play_list.extend(songs)
+        self.listChanged.emit()

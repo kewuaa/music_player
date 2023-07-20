@@ -5,3 +5,7 @@ cwd=<root>
 [edit-ui]
 command=<root>/.venv/Scripts/pyside6-designer ./src/music_player/ui/main.ui
 cwd=<root>
+
+[project-run]
+command:python=$(+pyenv) -m music_player
+cwd=<root>/src

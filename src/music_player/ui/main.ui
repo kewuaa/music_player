@@ -248,6 +248,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="stop_play_pushButton">
+           <property name="toolTip">
+            <string>&lt;b&gt;停止&lt;/b&gt;</string>
+           </property>
            <property name="text">
             <string/>
            </property>

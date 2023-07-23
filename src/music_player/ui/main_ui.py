@@ -70,6 +70,14 @@ class Ui_App(object):
 
         self.horizontalLayout.addItem(self.horizontalSpacer_2)
 
+        self.login_pushButton = QPushButton(self.widget)
+        self.login_pushButton.setObjectName(u"login_pushButton")
+        icon3 = QIcon()
+        icon3.addFile(u":/pic/icons/login.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.login_pushButton.setIcon(icon3)
+
+        self.horizontalLayout.addWidget(self.login_pushButton)
+
 
         self.gridLayout.addWidget(self.widget, 0, 0, 1, 2)
 
@@ -136,41 +144,41 @@ class Ui_App(object):
 
         self.previous_song_pushButton = QPushButton(self.widget_5)
         self.previous_song_pushButton.setObjectName(u"previous_song_pushButton")
-        icon3 = QIcon()
-        icon3.addFile(u":/pic/icons/previous.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.previous_song_pushButton.setIcon(icon3)
+        icon4 = QIcon()
+        icon4.addFile(u":/pic/icons/previous.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.previous_song_pushButton.setIcon(icon4)
 
         self.horizontalLayout_2.addWidget(self.previous_song_pushButton)
 
         self.toggle_play_state_pushButton = QPushButton(self.widget_5)
         self.toggle_play_state_pushButton.setObjectName(u"toggle_play_state_pushButton")
-        icon4 = QIcon()
-        icon4.addFile(u":/pic/icons/play.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.toggle_play_state_pushButton.setIcon(icon4)
+        icon5 = QIcon()
+        icon5.addFile(u":/pic/icons/play.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.toggle_play_state_pushButton.setIcon(icon5)
 
         self.horizontalLayout_2.addWidget(self.toggle_play_state_pushButton)
 
         self.next_song_pushButton = QPushButton(self.widget_5)
         self.next_song_pushButton.setObjectName(u"next_song_pushButton")
-        icon5 = QIcon()
-        icon5.addFile(u":/pic/icons/next.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.next_song_pushButton.setIcon(icon5)
+        icon6 = QIcon()
+        icon6.addFile(u":/pic/icons/next.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.next_song_pushButton.setIcon(icon6)
 
         self.horizontalLayout_2.addWidget(self.next_song_pushButton)
 
         self.stop_play_pushButton = QPushButton(self.widget_5)
         self.stop_play_pushButton.setObjectName(u"stop_play_pushButton")
-        icon6 = QIcon()
-        icon6.addFile(u":/pic/icons/stop.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.stop_play_pushButton.setIcon(icon6)
+        icon7 = QIcon()
+        icon7.addFile(u":/pic/icons/stop.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.stop_play_pushButton.setIcon(icon7)
 
         self.horizontalLayout_2.addWidget(self.stop_play_pushButton)
 
         self.volume_pushButton = QPushButton(self.widget_5)
         self.volume_pushButton.setObjectName(u"volume_pushButton")
-        icon7 = QIcon()
-        icon7.addFile(u":/pic/icons/sound_on.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.volume_pushButton.setIcon(icon7)
+        icon8 = QIcon()
+        icon8.addFile(u":/pic/icons/sound_on.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.volume_pushButton.setIcon(icon8)
 
         self.horizontalLayout_2.addWidget(self.volume_pushButton)
 
@@ -212,6 +220,10 @@ class Ui_App(object):
         self.search_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u641c\u7d22<b/>", None))
 #endif // QT_CONFIG(tooltip)
         self.search_pushButton.setText("")
+#if QT_CONFIG(tooltip)
+        self.login_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u767b\u5f55\u5f53\u524dAPI</b>", None))
+#endif // QT_CONFIG(tooltip)
+        self.login_pushButton.setText("")
         self.progress_label.setText(QCoreApplication.translate("App", u"00 / 00", None))
 #if QT_CONFIG(tooltip)
         self.previous_song_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u4e0a\u4e00\u66f2</b>", None))

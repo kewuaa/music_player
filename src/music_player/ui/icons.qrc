@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="pic">
+    <file>../../../icons/login.png</file>
     <file>../../../icons/sound_on.png</file>
     <file>../../../icons/sound_off.png</file>
     <file>../../../icons/stop.png</file>

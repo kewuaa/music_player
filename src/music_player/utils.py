@@ -3,6 +3,12 @@ from PySide6.QtGui import QIcon
 
 
 def load_icon(file: str) -> QIcon:
+    """ load icon from file(could be qrc file).
+
+    :param file: file path
+    ;return: QIcon object
+    """
+
     icon = QIcon()
     icon.addFile(
         file,

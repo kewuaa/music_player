@@ -121,6 +121,14 @@ class Player:
 
         self._play_mode = mode
 
+    def set_playback_rate(self, rate: float) -> None:
+        """ set playback rate.
+
+        :param rate: rate to set
+        """
+
+        self._player.setPlaybackRate(rate)
+
     def play_song(self, song: Template.Song) -> None:
         """ play a media source.
 

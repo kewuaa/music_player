@@ -492,8 +492,6 @@ class App(QWidget, Ui_App):
 
     @asyncSlot()
     async def on_login_pushButton_clicked(self) -> None:
-        """ log in."""
-
         name = self.api_comboBox.currentText()
         if name not in self._apis:
             api = self._apis[name]
@@ -506,6 +504,12 @@ class App(QWidget, Ui_App):
 
         self._login_dialog.connect_to_api(api)
         self._login_dialog.show()
+
+    @Slot(int)
+    def on_playback_rate_comboBox_currentIndexChanged(self, index: int) -> None:
+        _ = index
+        rate = float(self.playback_rate_comboBox.currentText())
+        self._player.set_playback_rate(rate)
 
 
 def run() -> None:

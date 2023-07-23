@@ -174,6 +174,20 @@ class Ui_App(object):
 
         self.horizontalLayout_2.addWidget(self.stop_play_pushButton)
 
+        self.playback_rate_comboBox = QComboBox(self.widget_5)
+        self.playback_rate_comboBox.addItem("")
+        self.playback_rate_comboBox.addItem("")
+        self.playback_rate_comboBox.addItem("")
+        self.playback_rate_comboBox.addItem("")
+        self.playback_rate_comboBox.addItem("")
+        self.playback_rate_comboBox.addItem("")
+        self.playback_rate_comboBox.addItem("")
+        self.playback_rate_comboBox.addItem("")
+        self.playback_rate_comboBox.addItem("")
+        self.playback_rate_comboBox.setObjectName(u"playback_rate_comboBox")
+
+        self.horizontalLayout_2.addWidget(self.playback_rate_comboBox)
+
         self.volume_pushButton = QPushButton(self.widget_5)
         self.volume_pushButton.setObjectName(u"volume_pushButton")
         icon8 = QIcon()
@@ -203,6 +217,9 @@ class Ui_App(object):
 
 
         self.retranslateUi(App)
+
+        self.playback_rate_comboBox.setCurrentIndex(2)
+
 
         QMetaObject.connectSlotsByName(App)
     # setupUi
@@ -241,6 +258,20 @@ class Ui_App(object):
         self.stop_play_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u505c\u6b62</b>", None))
 #endif // QT_CONFIG(tooltip)
         self.stop_play_pushButton.setText("")
+        self.playback_rate_comboBox.setItemText(0, QCoreApplication.translate("App", u"0.5", None))
+        self.playback_rate_comboBox.setItemText(1, QCoreApplication.translate("App", u"0.75", None))
+        self.playback_rate_comboBox.setItemText(2, QCoreApplication.translate("App", u"1.0", None))
+        self.playback_rate_comboBox.setItemText(3, QCoreApplication.translate("App", u"1.25", None))
+        self.playback_rate_comboBox.setItemText(4, QCoreApplication.translate("App", u"1.5", None))
+        self.playback_rate_comboBox.setItemText(5, QCoreApplication.translate("App", u"1.75", None))
+        self.playback_rate_comboBox.setItemText(6, QCoreApplication.translate("App", u"2.0", None))
+        self.playback_rate_comboBox.setItemText(7, QCoreApplication.translate("App", u"2.5", None))
+        self.playback_rate_comboBox.setItemText(8, QCoreApplication.translate("App", u"3.0", None))
+
+#if QT_CONFIG(tooltip)
+        self.playback_rate_comboBox.setToolTip(QCoreApplication.translate("App", u"<b>\u64ad\u653e\u901f\u7387</b>", None))
+#endif // QT_CONFIG(tooltip)
+        self.playback_rate_comboBox.setCurrentText(QCoreApplication.translate("App", u"1.0", None))
 #if QT_CONFIG(tooltip)
         self.volume_pushButton.setToolTip(QCoreApplication.translate("App", u"<b>\u97f3\u91cf</b>", None))
 #endif // QT_CONFIG(tooltip)

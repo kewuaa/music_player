@@ -275,6 +275,64 @@
           </widget>
          </item>
          <item>
+          <widget class="QComboBox" name="playback_rate_comboBox">
+           <property name="toolTip">
+            <string>&lt;b&gt;播放速率&lt;/b&gt;</string>
+           </property>
+           <property name="currentText">
+            <string>1.0</string>
+           </property>
+           <property name="currentIndex">
+            <number>2</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>0.5</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>0.75</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>1.0</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>1.25</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>1.5</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>1.75</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>2.0</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>2.5</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>3.0</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="volume_pushButton">
            <property name="toolTip">
             <string>&lt;b&gt;音量&lt;/b&gt;</string>

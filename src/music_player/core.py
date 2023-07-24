@@ -2,6 +2,7 @@ import asyncio
 import sys
 from functools import partial
 from typing import Callable, Optional
+from PySide6.QtMultimedia import QMediaPlayer
 
 from aiohttp import request
 from music_api import kg, kw, mg, qianqian, wyy
@@ -357,6 +358,12 @@ class App(QWidget, Ui_App):
             else:
                 self._player.play()
 
+        def do_when_media_status_changed(status: QMediaPlayer.MediaStatus) -> None:
+            if status is status.EndOfMedia:
+                self._player.schedule()
+            elif status is status.InvalidMedia:
+                QMessageBox.warning(self, "warning", "invalid media")
+
         def stop_play() -> None:
             self._player.stop()
             self.progress_Slider.setEnabled(False)
@@ -401,6 +408,7 @@ class App(QWidget, Ui_App):
 
         self.previous_song_pushButton.clicked.connect(self._player.previous)
         self._player.playingChanged.connect(toggle_play_icon)
+        self._player.mediaStatusChanged.connect(do_when_media_status_changed)
         self.toggle_play_state_pushButton.clicked.connect(toggle_play_state)
         self.next_song_pushButton.clicked.connect(self._player.next)
         self.stop_play_pushButton.clicked.connect(stop_play)

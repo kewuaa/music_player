@@ -51,6 +51,7 @@ class Player:
             self._current_song: Optional[Template.Song] = None
 
             self.playingChanged = self._player.playingChanged
+            self.mediaStatusChanged = self._player.mediaStatusChanged
             self.durationChanged = self._player.durationChanged
             self.positionChanged = self._player.positionChanged
             self.mutedChanged = self._audio_output.mutedChanged
@@ -144,6 +145,14 @@ class Player:
         self._current_song = song
         self._player.setSource(source)
         self._player.play()
+
+    def schedule(self) -> None:
+        """ schedule when end of media."""
+
+        if self._play_mode is None:
+            self._player.stop()
+        else:
+            self.next()
 
     def play_song_at(self, index: int) -> None:
         """ play song at list.

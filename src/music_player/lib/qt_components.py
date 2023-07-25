@@ -1,9 +1,11 @@
 import asyncio
 from typing import Optional
 
-from PySide6.QtGui import QMouseEvent
-from PySide6.QtWidgets import QLabel, QMessageBox, QWidget
+from aiohttp import request
 from music_api import Template
+from PySide6.QtCore import QBuffer, QIODeviceBase, QSize
+from PySide6.QtGui import QMouseEvent, QPixmap
+from PySide6.QtWidgets import QLabel, QMessageBox, QWidget
 
 from .media_player import Player
 
@@ -24,6 +26,20 @@ class SongLable(QLabel):
         super().__init__(song_info.desc, parent)
         self._info = song_info
         self._player = Player()
+        asyncio.create_task(self._set_tooltip())
+
+    async def _set_tooltip(self) -> None:
+        if self._info.img_url:
+            async with request("GET", self._info.img_url) as res:
+                data = await res.read()
+            img = QPixmap()
+            img.loadFromData(data)
+            img = img.scaled(QSize(300, 300))
+            buf = QBuffer()
+            buf.open(QIODeviceBase.OpenModeFlag.WriteOnly)
+            img.save(buf, "JPEG")
+            data = buf.data().toBase64().data()
+            self.setToolTip(f'<img src="data:image/jpeg;base64,{data.decode()}>')
 
     async def _fetch_song(self) -> Template.Song:
         """ fetch song."""

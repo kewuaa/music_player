@@ -8,11 +8,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtWidgets import (
     QApplication,
-    QCheckBox,
-    QHBoxLayout,
     QMessageBox,
-    QSizePolicy,
-    QSpacerItem,
     QStackedLayout,
     QStyleFactory,
     QWidget,
@@ -20,10 +16,9 @@ from PySide6.QtWidgets import (
 from qasync import QEventLoop, asyncClose, asyncSlot
 
 from .lib.media_player import Player
-from .lib.qt_components import SongLable
 from .login import LoginDialog
+from .search import SearchWidget
 from .ui.main_ui import Ui_App
-from .ui.search_ui import Ui_Frame as SearchFrame
 from .utils import load_icon
 
 apis = (wyy, kw, mg, kg, qianqian)
@@ -67,6 +62,9 @@ class App(QWidget, Ui_App):
         super().setupUi(self)
         self._login_dialog.setupUi()
         self.api_comboBox.addItems([api.name for api in apis])
+        self.stack_layout = QStackedLayout(self.main_widget)
+        self.search_widget = SearchWidget()
+        self.stack_layout.addWidget(self.search_widget)
 
     def deinit(self) -> None:
         """ destructor."""
@@ -191,28 +189,6 @@ class App(QWidget, Ui_App):
     async def on_search_pushButton_clicked(self):
         """ search button callback."""
 
-        async def clear_items(items: list) -> None:
-            for item in items:
-                if item.widget():
-                    item.widget().deleteLater()
-                self.result_verticalLayout.removeItem(item)
-                await asyncio.sleep(0)
-
-        async def create_item(song_info: Template.SongInfo) -> QWidget:
-            widget = QWidget()
-            button = QCheckBox("")
-            label = SongLable(song_info)
-            hbox = QHBoxLayout(widget)
-            hbox.addWidget(button)
-            hbox.addWidget(label)
-            hbox.addSpacerItem(QSpacerItem(
-                40,
-                20,
-                QSizePolicy.Policy.Expanding,
-                QSizePolicy.Policy.Minimum
-            ))
-            return widget
-
         name = self.api_comboBox.currentText()
         api = self._apis[name]
         keyword = self.search_lineEdit.text()
@@ -220,13 +196,8 @@ class App(QWidget, Ui_App):
             return
 
         res = await api.search(keyword)
-        item_count = self.result_verticalLayout.count()
-        if item_count > 0:
-            items = [self.result_verticalLayout.itemAt(i) for i in range(item_count)]
-            self._loop.create_task(clear_items(items))
-        tasks = [self._loop.create_task(create_item(item)) for item in res]
-        for task in tasks:
-            self.result_verticalLayout.addWidget(await task)
+        self.search_widget.clear()
+        self.search_widget.show_items(res)
 
     @asyncSlot()
     async def on_login_pushButton_clicked(self) -> None:

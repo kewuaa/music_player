@@ -15,10 +15,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QScrollArea, QSizePolicy, QSlider, QSpacerItem,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QHBoxLayout,
+    QLabel, QLineEdit, QPushButton, QSizePolicy,
+    QSlider, QSpacerItem, QWidget)
 from . import icons_rc
 
 class Ui_App(object):
@@ -87,31 +86,11 @@ class Ui_App(object):
 
         self.gridLayout.addWidget(self.widget_2, 1, 0, 1, 1)
 
-        self.widget_4 = QWidget(App)
-        self.widget_4.setObjectName(u"widget_4")
-        self.widget_4.setMinimumSize(QSize(511, 341))
-        self.verticalLayout = QVBoxLayout(self.widget_4)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.scrollArea = QScrollArea(self.widget_4)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setFrameShadow(QFrame.Raised)
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 588, 343))
-        self.verticalLayout_4 = QVBoxLayout(self.scrollAreaWidgetContents)
-        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.result_verticalLayout = QVBoxLayout()
-        self.result_verticalLayout.setObjectName(u"result_verticalLayout")
+        self.main_widget = QWidget(App)
+        self.main_widget.setObjectName(u"main_widget")
+        self.main_widget.setMinimumSize(QSize(511, 341))
 
-        self.verticalLayout_4.addLayout(self.result_verticalLayout)
-
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-
-        self.verticalLayout.addWidget(self.scrollArea)
-
-
-        self.gridLayout.addWidget(self.widget_4, 1, 1, 1, 1)
+        self.gridLayout.addWidget(self.main_widget, 1, 1, 1, 1)
 
         self.widget_3 = QWidget(App)
         self.widget_3.setObjectName(u"widget_3")

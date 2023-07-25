@@ -3,7 +3,7 @@ rcc=<root>/.venv/Scripts/pyside6-rcc
 uic=<root>/.venv/Scripts/pyside6-uic
 
 [gen-ui]
-command=$(+rcc) -o ./src/music_player/ui/icons_rc.py ./src/music_player/ui/icons.qrc && $(+uic) -o ./src/music_player/ui/login_ui.py ./src/music_player/ui/login.ui && $(+uic) -o ./src/music_player/ui/main_ui.py --from-imports ./src/music_player/ui/main.ui
+command=$(+rcc) -o ./src/music_player/ui/icons_rc.py ./src/music_player/ui/icons.qrc && $(+uic) -o ./src/music_player/ui/login_ui.py ./src/music_player/ui/login.ui && $(+uic) -o ./src/music_player/ui/search_ui.py ./src/music_player/ui/search.ui && $(+uic) -o ./src/music_player/ui/main_ui.py --from-imports ./src/music_player/ui/main.ui
 cwd=<root>
 
 [edit-ui]

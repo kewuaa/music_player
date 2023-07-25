@@ -77,7 +77,7 @@ class Player:
             return
 
     def play(self) -> None:
-        """ start to playing."""
+        """ start to play."""
 
         self._player.play()
 

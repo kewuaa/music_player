@@ -15,11 +15,11 @@ from PySide6.QtWidgets import (
 )
 from qasync import QEventLoop, asyncClose, asyncSlot
 
-from .lib.media_player import Player
+from ..lib.media_player import Player
 from .login import LoginDialog
 from .search import SearchWidget
-from .ui.main_ui import Ui_App
-from .utils import load_icon
+from ..ui.main_ui import Ui_App
+from ..utils import load_icon
 
 apis = (wyy, kw, mg, kg, qianqian)
 

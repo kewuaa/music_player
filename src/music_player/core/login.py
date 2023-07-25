@@ -6,7 +6,7 @@ from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QMessageBox, QWidget
 from music_api import Template
 
-from .ui.login_ui import Ui_Dialog
+from ..ui.login_ui import Ui_Dialog
 
 
 class LoginDialog(QDialog, Ui_Dialog):

@@ -9,8 +9,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .lib.qt_components import SongLable
-from .ui.search_ui import Ui_Form
+from ..lib.qt_components import SongLable
+from ..ui.search_ui import Ui_Form
 
 
 class SearchWidget(QWidget, Ui_Form):

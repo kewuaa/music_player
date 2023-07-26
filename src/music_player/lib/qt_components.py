@@ -15,7 +15,7 @@ class SongLable(QLabel):
 
     def __init__(
         self,
-        song_info: Template.SongInfo,
+        song_info: Template.Song.Information,
         parent: Optional[QWidget] = None,
         loop: Optional[asyncio.base_events.BaseEventLoop] = None
     ) -> None:

@@ -30,7 +30,7 @@ class SearchWidget(QWidget, Ui_Form):
                 item.widget().deleteLater()
             self.result_verticalLayout.removeItem(item)
 
-    def show_items(self, items: list[Template.SongInfo]) -> None:
+    def show_items(self, items: list[Template.Song.Information]) -> None:
         """ show list of items."""
 
         for item in items:

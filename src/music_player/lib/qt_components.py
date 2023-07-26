@@ -16,7 +16,8 @@ class SongLable(QLabel):
     def __init__(
         self,
         song_info: Template.SongInfo,
-        parent: Optional[QWidget] = None
+        parent: Optional[QWidget] = None,
+        loop: Optional[asyncio.base_events.BaseEventLoop] = None
     ) -> None:
         """ initialize.
 
@@ -25,8 +26,9 @@ class SongLable(QLabel):
 
         super().__init__(song_info.desc, parent)
         self._info = song_info
+        self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._player = Player()
-        asyncio.create_task(self._set_tooltip())
+        self._loop.create_task(self._set_tooltip())
 
     async def _set_tooltip(self) -> None:
         if self._info.img_url:
@@ -55,14 +57,17 @@ class SongLable(QLabel):
                 raise exception
             song = fut.result()
             assert type(song) is Template.Song
-            if song.status == song.Status.NeedLogin:
+            if song.status is song.Status.NeedLogin:
                 QMessageBox.information(self, "info", "need log in")
-            elif song.status == song.Status.NeedVIP:
+            elif song.status is song.Status.NeedVIP:
                 QMessageBox.information(self, "info", "need vip")
-            elif song.status == song.Status.Success:
-                self._player.play_song(song)
+            elif song.status is song.Status.Success:
+                if self._player.is_playing():
+                    self._player.stop()
+                    self._loop.call_soon(self._player.play_song, song)
+                else:
+                    self._player.play_song(song)
         self._player.set_mode(None)
-        loop = asyncio.get_event_loop()
-        task = loop.create_task(self._fetch_song())
+        task = self._loop.create_task(self._fetch_song())
         task.add_done_callback(callback)
         return super().mouseDoubleClickEvent(event)

@@ -155,6 +155,9 @@
            <property name="editable">
             <bool>false</bool>
            </property>
+           <property name="currentIndex">
+            <number>3</number>
+           </property>
            <property name="sizeAdjustPolicy">
             <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
            </property>
@@ -192,6 +195,11 @@
             <property name="icon">
              <iconset resource="icons.qrc">
               <normaloff>:/pic/icons/random_play.png</normaloff>:/pic/icons/random_play.png</iconset>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string/>
             </property>
            </item>
           </widget>

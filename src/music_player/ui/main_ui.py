@@ -107,6 +107,7 @@ class Ui_App(object):
         icon7 = QIcon()
         icon7.addFile(u":/pic/icons/random_play.png", QSize(), QIcon.Normal, QIcon.Off)
         self.play_mode_comboBox.addItem(icon7, "")
+        self.play_mode_comboBox.addItem("")
         self.play_mode_comboBox.setObjectName(u"play_mode_comboBox")
         self.play_mode_comboBox.setEditable(False)
         self.play_mode_comboBox.setSizeAdjustPolicy(QComboBox.AdjustToContentsOnFirstShow)
@@ -231,6 +232,7 @@ class Ui_App(object):
 
         self.retranslateUi(App)
 
+        self.play_mode_comboBox.setCurrentIndex(3)
         self.playback_rate_comboBox.setCurrentIndex(2)
 
 
@@ -259,6 +261,7 @@ class Ui_App(object):
         self.play_mode_comboBox.setItemText(0, QCoreApplication.translate("App", u"\u5355\u66f2", None))
         self.play_mode_comboBox.setItemText(1, QCoreApplication.translate("App", u"\u987a\u5e8f", None))
         self.play_mode_comboBox.setItemText(2, QCoreApplication.translate("App", u"\u968f\u673a", None))
+        self.play_mode_comboBox.setItemText(3, "")
 
 #if QT_CONFIG(tooltip)
         self.play_mode_comboBox.setToolTip(QCoreApplication.translate("App", u"<b>\u64ad\u653e\u6a21\u5f0f</b>", None))

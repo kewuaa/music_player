@@ -242,7 +242,9 @@ class App(QWidget, Ui_App):
 
     @Slot(int)
     def on_play_mode_comboBox_currentIndexChanged(self, index: int) -> None:
-        self._player.set_mode(PlayMode(index))
+        self._player.set_mode(
+            PlayMode(index) if self.play_mode_comboBox.currentText() else None
+        )
 
 
 def run() -> None:

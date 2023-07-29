@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'search.ui'
+## Form generated from reading UI file 'play_list.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.1
 ##
@@ -23,20 +23,20 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(426, 328)
+        Form.resize(400, 300)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.widget = QWidget(Form)
         self.widget.setObjectName(u"widget")
         self.horizontalLayout = QHBoxLayout(self.widget)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.add_pushButton = QPushButton(self.widget)
-        self.add_pushButton.setObjectName(u"add_pushButton")
+        self.remove_pushButton = QPushButton(self.widget)
+        self.remove_pushButton.setObjectName(u"remove_pushButton")
         icon = QIcon()
-        icon.addFile(u":/pic/icons/add.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.add_pushButton.setIcon(icon)
+        icon.addFile(u":/pic/icons/remove.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.remove_pushButton.setIcon(icon)
 
-        self.horizontalLayout.addWidget(self.add_pushButton)
+        self.horizontalLayout.addWidget(self.remove_pushButton)
 
         self.download_pushButton = QPushButton(self.widget)
         self.download_pushButton.setObjectName(u"download_pushButton")
@@ -58,13 +58,13 @@ class Ui_Form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 406, 260))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 380, 232))
         self.verticalLayout_3 = QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.result_verticalLayout = QVBoxLayout()
-        self.result_verticalLayout.setObjectName(u"result_verticalLayout")
+        self.list_verticalLayout = QVBoxLayout()
+        self.list_verticalLayout.setObjectName(u"list_verticalLayout")
 
-        self.verticalLayout_3.addLayout(self.result_verticalLayout)
+        self.verticalLayout_3.addLayout(self.list_verticalLayout)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
@@ -78,7 +78,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.add_pushButton.setText("")
+        self.remove_pushButton.setText("")
         self.download_pushButton.setText("")
     # retranslateUi
 

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>426</width>
-    <height>328</height>
+    <width>400</width>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,13 +18,13 @@
     <widget class="QWidget" name="widget" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <widget class="QPushButton" name="add_pushButton">
+       <widget class="QPushButton" name="remove_pushButton">
         <property name="text">
          <string/>
         </property>
         <property name="icon">
          <iconset resource="icons.qrc">
-          <normaloff>:/pic/icons/add.png</normaloff>:/pic/icons/add.png</iconset>
+          <normaloff>:/pic/icons/remove.png</normaloff>:/pic/icons/remove.png</iconset>
         </property>
        </widget>
       </item>
@@ -65,13 +65,13 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>406</width>
-        <height>260</height>
+        <width>380</width>
+        <height>232</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <layout class="QVBoxLayout" name="result_verticalLayout"/>
+        <layout class="QVBoxLayout" name="list_verticalLayout"/>
        </item>
       </layout>
      </widget>

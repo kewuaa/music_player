@@ -15,11 +15,13 @@ from PySide6.QtWidgets import (
 )
 from qasync import QEventLoop, asyncClose, asyncSlot
 
-from ..lib.media_player import Player
-from .login import LoginDialog
-from .search import SearchWidget
+from ..lib.media_player import Player, PlayMode
 from ..ui.main_ui import Ui_App
 from ..utils import load_icon
+from .home import HomeWidget
+from .login import LoginDialog
+from .play_list import PlayListWidget
+from .search import SearchWidget
 
 apis = (wyy, kw, mg, kg, qianqian)
 
@@ -63,8 +65,13 @@ class App(QWidget, Ui_App):
         self._login_dialog.setupUi()
         self.api_comboBox.addItems([api.name for api in apis])
         self.stack_layout = QStackedLayout(self.main_widget)
+        self.home_widget = HomeWidget()
         self.search_widget = SearchWidget()
+        self.play_list_widget = PlayListWidget()
+        self.play_list_widget.connect_to_player(self._player)
+        self.stack_layout.addWidget(self.home_widget)
         self.stack_layout.addWidget(self.search_widget)
+        self.stack_layout.addWidget(self.play_list_widget)
 
     def deinit(self) -> None:
         """ destructor."""
@@ -195,9 +202,22 @@ class App(QWidget, Ui_App):
         if not keyword:
             return
 
+        self.stack_layout.setCurrentIndex(1)
         res = await api.search(keyword)
         self.search_widget.clear()
         self.search_widget.show_items(res)
+
+    @Slot()
+    def on_home_pushButton_clicked(self) -> None:
+        self.stack_layout.setCurrentIndex(0)
+
+    @Slot()
+    def on_switch_to_search_page_pushButton_clicked(self) -> None:
+        self.stack_layout.setCurrentIndex(1)
+
+    @Slot()
+    def on_switch_to_list_page_pushButton_clicked(self) -> None:
+        self.stack_layout.setCurrentIndex(2)
 
     @asyncSlot()
     async def on_login_pushButton_clicked(self) -> None:
@@ -219,6 +239,10 @@ class App(QWidget, Ui_App):
         _ = index
         rate = float(self.playback_rate_comboBox.currentText())
         self._player.set_playback_rate(rate)
+
+    @Slot(int)
+    def on_play_mode_comboBox_currentIndexChanged(self, index: int) -> None:
+        self._player.set_mode(PlayMode(index))
 
 
 def run() -> None:

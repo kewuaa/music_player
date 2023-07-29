@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>752</width>
+    <width>655</width>
     <height>538</height>
    </rect>
   </property>
@@ -18,106 +18,6 @@
     <normaloff>:/pic/icons/title.png</normaloff>:/pic/icons/title.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="2">
-    <widget class="QWidget" name="widget" native="true">
-     <property name="minimumSize">
-      <size>
-       <width>637</width>
-       <height>61</height>
-      </size>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QPushButton" name="home_pushButton">
-        <property name="toolTip">
-         <string>&lt;b&gt;返回主页&lt;/b&gt;</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="icons.qrc">
-          <normaloff>:/pic/icons/home.png</normaloff>:/pic/icons/home.png</iconset>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QComboBox" name="api_comboBox">
-        <property name="toolTip">
-         <string>&lt;b&gt;选择API&lt;/b&gt;</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="search_lineEdit"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="search_pushButton">
-        <property name="toolTip">
-         <string>&lt;b&gt;搜索&lt;b/&gt;</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="icons.qrc">
-          <normaloff>:/pic/icons/search.png</normaloff>:/pic/icons/search.png</iconset>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="login_pushButton">
-        <property name="toolTip">
-         <string>&lt;b&gt;登录当前API&lt;/b&gt;</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-        <property name="icon">
-         <iconset resource="icons.qrc">
-          <normaloff>:/pic/icons/login.png</normaloff>:/pic/icons/login.png</iconset>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QWidget" name="widget_2" native="true">
-     <property name="minimumSize">
-      <size>
-       <width>120</width>
-       <height>341</height>
-      </size>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="1">
     <widget class="QWidget" name="main_widget" native="true">
      <property name="minimumSize">
@@ -248,6 +148,55 @@
           </widget>
          </item>
          <item>
+          <widget class="QComboBox" name="play_mode_comboBox">
+           <property name="toolTip">
+            <string>&lt;b&gt;播放模式&lt;/b&gt;</string>
+           </property>
+           <property name="editable">
+            <bool>false</bool>
+           </property>
+           <property name="sizeAdjustPolicy">
+            <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>13</width>
+             <height>13</height>
+            </size>
+           </property>
+           <property name="duplicatesEnabled">
+            <bool>false</bool>
+           </property>
+           <item>
+            <property name="text">
+             <string>单曲</string>
+            </property>
+            <property name="icon">
+             <iconset resource="icons.qrc">
+              <normaloff>:/pic/icons/single_play.png</normaloff>:/pic/icons/single_play.png</iconset>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>顺序</string>
+            </property>
+            <property name="icon">
+             <iconset resource="icons.qrc">
+              <normaloff>:/pic/icons/loop_play.png</normaloff>:/pic/icons/loop_play.png</iconset>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>随机</string>
+            </property>
+            <property name="icon">
+             <iconset resource="icons.qrc">
+              <normaloff>:/pic/icons/random_play.png</normaloff>:/pic/icons/random_play.png</iconset>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
           <widget class="QComboBox" name="playback_rate_comboBox">
            <property name="toolTip">
             <string>&lt;b&gt;播放速率&lt;/b&gt;</string>
@@ -350,6 +299,135 @@
          </item>
         </layout>
        </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <widget class="QWidget" name="widget" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>637</width>
+       <height>61</height>
+      </size>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QPushButton" name="home_pushButton">
+        <property name="toolTip">
+         <string>&lt;b&gt;返回主页&lt;/b&gt;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="icons.qrc">
+          <normaloff>:/pic/icons/home.png</normaloff>:/pic/icons/home.png</iconset>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QComboBox" name="api_comboBox">
+        <property name="toolTip">
+         <string>&lt;b&gt;选择API&lt;/b&gt;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="search_lineEdit"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="search_pushButton">
+        <property name="toolTip">
+         <string>&lt;b&gt;搜索&lt;b/&gt;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="icons.qrc">
+          <normaloff>:/pic/icons/search.png</normaloff>:/pic/icons/search.png</iconset>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="login_pushButton">
+        <property name="toolTip">
+         <string>&lt;b&gt;登录当前API&lt;/b&gt;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="icons.qrc">
+          <normaloff>:/pic/icons/login.png</normaloff>:/pic/icons/login.png</iconset>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QWidget" name="widget_2" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>120</width>
+       <height>341</height>
+      </size>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QPushButton" name="switch_to_search_page_pushButton">
+        <property name="text">
+         <string>搜索页</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="switch_to_list_page_pushButton">
+        <property name="text">
+         <string>播放列表</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
       </item>
      </layout>
     </widget>

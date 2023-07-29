@@ -1,9 +1,15 @@
 [+]
 rcc=<root>/.venv/Scripts/pyside6-rcc
-uic=<root>/.venv/Scripts/pyside6-uic
+uic=<root>/.venv/Scripts/pyside6-uic --from-imports
+qrc_file=./src/music_player/ui/icons
+login_ui=./src/music_player/ui/login
+search_ui=./src/music_player/ui/search
+play_list_ui=./src/music_player/ui/play_list
+home_ui=./src/music_player/ui/home
+main_ui=./src/music_player/ui/main
 
 [gen-ui]
-command=$(+rcc) -o ./src/music_player/ui/icons_rc.py ./src/music_player/ui/icons.qrc && $(+uic) -o ./src/music_player/ui/login_ui.py ./src/music_player/ui/login.ui && $(+uic) -o ./src/music_player/ui/search_ui.py ./src/music_player/ui/search.ui && $(+uic) -o ./src/music_player/ui/main_ui.py --from-imports ./src/music_player/ui/main.ui
+command=$(+rcc) -o $(+qrc_file)_rc.py $(+qrc_file).qrc && $(+uic) -o $(+login_ui)_ui.py $(+login_ui).ui && $(+uic) -o $(+search_ui)_ui.py $(+search_ui).ui && $(+uic) -o $(+play_list_ui)_ui.py $(+play_list_ui).ui && $(+uic) -o $(+home_ui)_ui.py $(+home_ui).ui && $(+uic) -o $(+main_ui)_ui.py $(+main_ui).ui
 cwd=<root>
 
 [edit-ui]

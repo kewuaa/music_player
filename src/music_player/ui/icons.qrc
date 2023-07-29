@@ -1,5 +1,11 @@
 <RCC>
   <qresource prefix="pic">
+    <file>../../../icons/remove.png</file>
+    <file>../../../icons/add.png</file>
+    <file>../../../icons/download.png</file>
+    <file>../../../icons/single_play.png</file>
+    <file>../../../icons/loop_play.png</file>
+    <file>../../../icons/random_play.png</file>
     <file>../../../icons/login.png</file>
     <file>../../../icons/sound_on.png</file>
     <file>../../../icons/sound_off.png</file>

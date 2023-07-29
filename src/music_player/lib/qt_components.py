@@ -5,17 +5,17 @@ from aiohttp import request
 from music_api import Template
 from PySide6.QtCore import QBuffer, QIODeviceBase, QSize
 from PySide6.QtGui import QMouseEvent, QPixmap
-from PySide6.QtWidgets import QLabel, QMessageBox, QWidget
+from PySide6.QtWidgets import QLabel, QWidget
 
 from .media_player import Player
 
 
-class SongLable(QLabel):
+class SongLabel(QLabel):
     """ label to display song information and support double clicked."""
 
     def __init__(
         self,
-        song_info: Template.Song.Information,
+        song: Template.Song,
         parent: Optional[QWidget] = None,
         loop: Optional[asyncio.base_events.BaseEventLoop] = None
     ) -> None:
@@ -24,15 +24,15 @@ class SongLable(QLabel):
         :parent parent: parent widget
         """
 
-        super().__init__(song_info.desc, parent)
-        self._info = song_info
+        super().__init__(song.desc, parent)
+        self._song = song
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._player = Player()
         self._loop.create_task(self._set_tooltip())
 
     async def _set_tooltip(self) -> None:
-        if self._info.img_url:
-            async with request("GET", self._info.img_url) as res:
+        if self._song.img_url:
+            async with request("GET", self._song.img_url) as res:
                 data = await res.read()
             img = QPixmap()
             img.loadFromData(data)
@@ -43,31 +43,6 @@ class SongLable(QLabel):
             data = buf.data().toBase64().data()
             self.setToolTip(f'<img src="data:image/jpeg;base64,{data.decode()}>')
 
-    async def _fetch_song(self) -> Template.Song:
-        """ fetch song."""
-
-        api = self._info.master
-        song = await api.fetch_song(self._info)
-        return song
-
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
-        def callback(fut: asyncio.Task[Template.Song]) -> None:
-            exception = fut.exception()
-            if exception is not None:
-                raise exception
-            song = fut.result()
-            assert type(song) is Template.Song
-            if song.status is song.Status.NeedLogin:
-                QMessageBox.information(self, "info", "need log in")
-            elif song.status is song.Status.NeedVIP:
-                QMessageBox.information(self, "info", "need vip")
-            elif song.status is song.Status.Success:
-                if self._player.is_playing():
-                    self._player.stop()
-                    self._loop.call_soon(self._player.play_song, song)
-                else:
-                    self._player.play_song(song)
-        self._player.set_mode(None)
-        task = self._loop.create_task(self._fetch_song())
-        task.add_done_callback(callback)
+        self._player.play_media(self._song)
         return super().mouseDoubleClickEvent(event)

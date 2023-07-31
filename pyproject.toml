@@ -1,3 +1,22 @@
+[project]
+name = "music_player"
+authors = [{name = "kewuaa"}]
+description = "simple music player"
+version = "0.1.0"
+urls = { GitHub = "https://github.com/kewuaa/music_player.git" }
+dependencies = [
+    "PySide6",
+    "pymusicapi",
+    "qasync",
+    "aiohttp",
+]
+readme = "README.md"
+scripts = { music_player = "music_player:run" }
+
+[tool.setuptools]
+packages = {find = {where = ["./src"], exclude = ["music_api"]}}
+package-dir = {"" = "./src"}
+
 [tool.pyright]
 include = ["src"]
 exclude = [

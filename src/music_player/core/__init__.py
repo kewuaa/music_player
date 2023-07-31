@@ -47,6 +47,7 @@ class App(QWidget, Ui_App):
         self._qt_app = QApplication(sys.argv)
         self._qt_app.setStyle(QStyleFactory.create("Fusion"))
         self._loop = QEventLoop(self._qt_app)
+        asyncio.set_event_loop(self._loop)
         super().__init__(parent)
         self._apis: dict[str, Template] = APIDict()
         self._player = Player(self)

@@ -63,6 +63,7 @@ class App(QWidget, Ui_App):
         """ setup Ui."""
 
         super().setupUi(self)
+        self._center()
         self._login_dialog.setupUi()
         self.api_comboBox.addItems([api.name for api in apis])
         self.stack_layout = QStackedLayout(self.main_widget)
@@ -73,6 +74,14 @@ class App(QWidget, Ui_App):
         self.stack_layout.addWidget(self.home_widget)
         self.stack_layout.addWidget(self.search_widget)
         self.stack_layout.addWidget(self.play_list_widget)
+
+    def _center(self) -> None:
+        """ center ui."""
+
+        qr = self.frameGeometry()
+        cp = self.screen().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
     def deinit(self) -> None:
         """ destructor."""

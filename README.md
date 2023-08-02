@@ -9,4 +9,6 @@ cd music_player
 pip install .
 ```
 
+or `pip install git+https://github.com/kewuaa/music_player.git`
+
 then run music_player

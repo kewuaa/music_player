@@ -1,10 +1,11 @@
 import asyncio
 from functools import partial
 from typing import Callable, Optional
+
+from music_api import Template
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QMessageBox, QWidget
-from music_api import Template
 
 from ..ui.login_ui import Ui_Dialog
 

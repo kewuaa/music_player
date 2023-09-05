@@ -1,9 +1,10 @@
 import asyncio
 import sys
-from typing import Optional
+from typing import Optional, Union
 
 from music_api import kg, kw, mg, qianqian, wyy
 from music_api._template import Template
+from PySide6 import QtGui
 from PySide6.QtCore import Slot
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtWidgets import (
@@ -35,19 +36,20 @@ class APIDict(dict):
         raise KeyError(f"unexpected key: {key}")
 
 
-class App(QWidget, Ui_App):
+class PyMusic(QWidget, Ui_App):
     """ Application."""
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        parent: Optional[QWidget] = None,
+        loop: Union[QEventLoop, asyncio.AbstractEventLoop, None] = None,
+    ) -> None:
         """ initialize.
 
         :parent parent: parent widget
         """
 
-        self._qt_app = QApplication(sys.argv)
-        self._qt_app.setStyle(QStyleFactory.create("Fusion"))
-        self._loop = QEventLoop(self._qt_app)
-        asyncio.set_event_loop(self._loop)
+        self._loop = loop if loop is not None else asyncio.get_event_loop()
         super().__init__(parent)
         self._apis: dict[str, Template] = APIDict()
         self._player = Player(self)
@@ -88,6 +90,10 @@ class App(QWidget, Ui_App):
 
         for api in self._apis.values():
             asyncClose(api.deinit)()
+
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        self.deinit()
+        return super().closeEvent(event)
 
     def _connect_to_media_player(self) -> None:
         """ connect to media player."""
@@ -177,31 +183,6 @@ class App(QWidget, Ui_App):
 
         self.volume_Slider.setSliderPosition(50)
 
-    def run(self) -> None:
-        """ run Application."""
-
-        async def _run() -> None:
-            fut = self._loop.create_future()
-            self._qt_app.aboutToQuit.connect(
-                lambda: (
-                    self.deinit(),
-                    fut.cancel()
-                )
-            )
-            self.show()
-            try:
-                await fut
-            except asyncio.CancelledError:
-                pass
-        self._loop.run_until_complete(_run())
-        to_cancel = asyncio.tasks.all_tasks(self._loop)
-        if to_cancel:
-            for task in to_cancel:
-                task.cancel()
-            asyncio.gather(*to_cancel, return_exceptions=True)
-        self._loop.run_until_complete(self._loop.shutdown_asyncgens())
-        self._loop.run_until_complete(self._loop.shutdown_default_executor())
-
     @asyncSlot()
     async def on_search_pushButton_clicked(self):
         """ search button callback."""
@@ -260,4 +241,13 @@ class App(QWidget, Ui_App):
 def run() -> None:
     """ run an application."""
 
-    App().run()
+    app = QApplication(sys.argv)
+    app.setStyle(QStyleFactory.create("Fusion"))
+    loop = QEventLoop(app)
+    asyncio.set_event_loop(loop)
+    pm = PyMusic()
+    pm.show()
+    try:
+        loop.run_forever()
+    finally:
+        loop.close()
